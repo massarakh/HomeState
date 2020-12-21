@@ -7,6 +7,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 using Telegram.Bot.Args;
+using Telegram.Bot.Types.ReplyMarkups;
 using TG_Bot.DAL;
 
 namespace TG_Bot.BusinessLayer
@@ -35,25 +36,74 @@ namespace TG_Bot.BusinessLayer
             if (e.Message.Text != null)
             {
                 _logger.LogInformation($"Received a text message in chat {e.Message.Chat.Id}.");
-
+                InlineKeyboardMarkup inlineKeyboard = null;
                 switch (e.Message.Text)
                 {
                     case "/start":
                         //отправить клавиатуру выбора
                         //старт
+                        inlineKeyboard = new InlineKeyboardMarkup(new[]
+                        {
+                            InlineKeyboardButton.WithCallbackData("Состояние","state"),
+                            InlineKeyboardButton.WithCallbackData("Последнее значение","last"),
+                        });
+                        await _botClient.SendTextMessageAsync(
+                            chatId: e.Message.Chat.Id,
+                            text: "Запрос",
+                            replyMarkup: inlineKeyboard);
                         break;
 
-                    default: 
+                    case "/state":
+                        var state = await _stateService.LastState();
+                        inlineKeyboard = new InlineKeyboardMarkup(new[]
+                        {
+                            InlineKeyboardButton.WithCallbackData("Состояние","state"),
+                            InlineKeyboardButton.WithCallbackData("Последнее значение","last"),
+                        });
+                        await _botClient.SendTextMessageAsync(
+                            chatId: e.Message.Chat.Id,
+                            text: "Температура в спальне: "+state.TemperatureLivingRoom.ToString()+ "°C",
+                            replyMarkup: inlineKeyboard);
+                        break;
+
+                    case "last":
+
+                        break;
+
+                    default:
 
                         break;
                 }
-                
-                await _botClient.SendTextMessageAsync(
-                    chatId: e.Message.Chat,
-                    text: "You said:\n" + e.Message.Text
-                );
+
+
+                //await _botClient.SendTextMessageAsync(
+                //    chatId: e.Message.Chat,
+                //    text: "You said:\n" + e.Message.Text
+                //);
             }
         }
+
+        //var inlineKeyboard = new InlineKeyboardMarkup(new[]
+        //{
+        //    // first row
+        //    new []
+        //    {
+        //        InlineKeyboardButton.WithCallbackData("1.1", "11"),
+        //        InlineKeyboardButton.WithCallbackData("1.2", "12"),
+        //    },
+        //    // second row
+        //    new []
+        //    {
+        //        InlineKeyboardButton.WithCallbackData("2.1", "21"),
+        //        InlineKeyboardButton.WithCallbackData("2.2", "22"),
+        //    }
+        //});
+        //await Bot.SendTextMessageAsync(
+        //    chatId: message.Chat.Id,
+        //text: "Choose",
+        //replyMarkup: inlineKeyboard
+
+        //);
 
         /// <inheritdoc />
         public async Task StartAsync(CancellationToken cancellationToken)
