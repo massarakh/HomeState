@@ -71,14 +71,16 @@ namespace TG_Bot.BusinessLayer
             if (message.Type != MessageType.Text)
                 return;
 
-            var action = (message.Text.Split(' ').First()) switch
-            {
-                "/inline" => SendInlineKeyboard(message),
-                "/keyboard" => SendReplyKeyboard(message),
-                "/photo" => SendFile(message),
-                "/request" => RequestContactAndLocation(message),
-                _ => Usage(message)
-            };
+            //var action = (message.Text.Split(' ').First()) switch
+            //{
+            //    "/state" => SendInlineKeyboard(message),
+            //    "/temperature" => SendInlineKeyboard(message),
+            //    //"/keyboard" => SendReplyKeyboard(message),
+            //    //"/photo" => SendFile(message),
+            //    //"/request" => RequestContactAndLocation(message),
+            //    _ => Usage(message)
+            //};
+            var action = SendInlineKeyboard(message);
             await action;
 
 
@@ -89,28 +91,35 @@ namespace TG_Bot.BusinessLayer
         async Task SendInlineKeyboard(Message message)
         {
             await _botClient.SendChatActionAsync(message.Chat.Id, ChatAction.Typing);
-
-            // Simulate longer running task
-            await Task.Delay(500);
-
-            var inlineKeyboard = new InlineKeyboardMarkup(new[]
+            InlineKeyboardMarkup inlineKeyboard = null;
+            switch (message.Text)
             {
-                    // first row
-                    new []
+                case "/start":
+                    inlineKeyboard = new InlineKeyboardMarkup(new[]
                     {
-                        InlineKeyboardButton.WithCallbackData("1.1", "11"),
-                        InlineKeyboardButton.WithCallbackData("1.2", "12"),
-                    },
-                    // second row
-                    new []
-                    {
-                        InlineKeyboardButton.WithCallbackData("2.1", "21"),
-                        InlineKeyboardButton.WithCallbackData("2.2", "22"),
-                    }
-                });
+                        new[]
+                        {
+                            InlineKeyboardButton.WithCallbackData("Все параметры", "state"),
+                            InlineKeyboardButton.WithCallbackData("Электричество", "electricity"),
+
+                        },
+                        new[]
+                        {
+                            InlineKeyboardButton.WithCallbackData("Нагрев", "heating"),
+                            InlineKeyboardButton.WithCallbackData("Температура", "temperature"),
+                        }
+                    });
+                    break;
+
+                case "/temperature":
+
+                    break;
+            }
+
+
             await _botClient.SendTextMessageAsync(
                 chatId: message.Chat.Id,
-                text: "Choose",
+                text: "Выберите запрос",
                 replyMarkup: inlineKeyboard
             );
         }
@@ -164,11 +173,14 @@ namespace TG_Bot.BusinessLayer
 
         async Task Usage(Message message)
         {
-            const string usage = "Usage:\n" +
-                                    "/inline   - send inline keyboard\n" +
-                                    "/keyboard - send custom keyboard\n" +
-                                    "/photo    - send a photo\n" +
-                                    "/request  - request location or contact";
+            //const string usage = "Usage:\n" +
+            //                        "/inline   - send inline keyboard\n" +
+            //                        "/keyboard - send custom keyboard\n" +
+            //                        "/photo    - send a photo\n" +
+            //                        "/request  - request location or contact";
+            const string usage = "Использование: \n" +
+                                 "/state          - текущее состояние системы\n" +
+                                 "/temperature    - температура объектов";
             await _botClient.SendTextMessageAsync(
                 chatId: message.Chat.Id,
                 text: usage,
@@ -179,6 +191,29 @@ namespace TG_Bot.BusinessLayer
         // Process Inline Keyboard callback data
         private async Task BotOnCallbackQueryReceived(CallbackQuery callbackQuery)
         {
+            switch (callbackQuery.Data)
+            {
+                case "state":
+
+                    break;
+
+                case "electricity":
+
+                    break;
+
+                case "heating":
+
+                    break;
+
+                case "temperature":
+
+                    break;
+
+                default:
+
+                    break;
+            }
+
             await _botClient.AnswerCallbackQueryAsync(
                 callbackQuery.Id,
                 $"Received {callbackQuery.Data}"
@@ -290,7 +325,7 @@ namespace TG_Bot.BusinessLayer
                 //);
             }
         }
-        
+
         /// <inheritdoc />
         public async Task StartAsync(CancellationToken cancellationToken)
         {
@@ -303,7 +338,7 @@ namespace TG_Bot.BusinessLayer
 
             // StartReceiving does not block the caller thread. Receiving is done on the ThreadPool.
             _botClient.StartReceiving(new DefaultUpdateHandler(HandleUpdateAsync, HandleErrorAsync), _stoppingCts.Token);
-            _logger.LogInformation("Telegram bot started, waithing for messages");
+            _logger.LogInformation("Telegram bot started, waiting for messages");
         }
 
         /// <inheritdoc />
