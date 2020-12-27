@@ -62,7 +62,7 @@ namespace TG_Bot.monitoring
                     .HasCharSet("utf8")
                     .HasCollation("utf8_general_ci");
 
-                entity.Property(e => e.PhaseOne)
+                entity.Property(e => e.Phase1)
                     .HasColumnType("float(9,3)")
                     .HasDefaultValueSql("'0.000'");
 

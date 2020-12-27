@@ -17,6 +17,8 @@ using Telegram.Bot.Types.InlineQueryResults;
 using Telegram.Bot.Types.InputFiles;
 using Telegram.Bot.Types.ReplyMarkups;
 using TG_Bot.DAL;
+using TG_Bot.Helpers;
+using Monitor = TG_Bot.monitoring.Monitor;
 
 namespace TG_Bot.BusinessLayer
 {
@@ -25,10 +27,24 @@ namespace TG_Bot.BusinessLayer
         private readonly ILogger<BotService> _logger;
         private readonly IStateService _stateService;
         private readonly ITelegramBotClient _botClient;
-        private Task _executingTask;
         private readonly CancellationTokenSource _stoppingCts =
             new CancellationTokenSource();
 
+        public InlineKeyboardMarkup Keyboard =>
+            new InlineKeyboardMarkup(new[]
+            {
+                new[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Все параметры", "state"),
+                    InlineKeyboardButton.WithCallbackData("Электричество", "electricity"),
+
+                },
+                new[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Нагрев", "heating"),
+                    InlineKeyboardButton.WithCallbackData("Температура", "temperature"),
+                }
+            });
 
         public BotService(ILogger<BotService> logger, IStateService stateService)
         {
@@ -91,28 +107,15 @@ namespace TG_Bot.BusinessLayer
         async Task SendInlineKeyboard(Message message)
         {
             await _botClient.SendChatActionAsync(message.Chat.Id, ChatAction.Typing);
-            InlineKeyboardMarkup inlineKeyboard = null;
+            InlineKeyboardMarkup inlineKeyboard;
             switch (message.Text)
             {
                 case "/start":
-                    inlineKeyboard = new InlineKeyboardMarkup(new[]
-                    {
-                        new[]
-                        {
-                            InlineKeyboardButton.WithCallbackData("Все параметры", "state"),
-                            InlineKeyboardButton.WithCallbackData("Электричество", "electricity"),
-
-                        },
-                        new[]
-                        {
-                            InlineKeyboardButton.WithCallbackData("Нагрев", "heating"),
-                            InlineKeyboardButton.WithCallbackData("Температура", "temperature"),
-                        }
-                    });
+                    inlineKeyboard = Keyboard;
                     break;
 
-                case "/temperature":
-
+                default:
+                    inlineKeyboard = Keyboard;
                     break;
             }
 
@@ -124,22 +127,13 @@ namespace TG_Bot.BusinessLayer
             );
         }
 
-        async Task SendReplyKeyboard(Message message)
+        async Task SendInlineKeyboard(long ChatId)
         {
-            var replyKeyboardMarkup = new ReplyKeyboardMarkup(
-                new KeyboardButton[][]
-                {
-                        new KeyboardButton[] { "1.1", "1.2" },
-                        new KeyboardButton[] { "2.1", "2.2" },
-                },
-                resizeKeyboard: true
-            );
-
+            await _botClient.SendChatActionAsync(ChatId, ChatAction.Typing);
             await _botClient.SendTextMessageAsync(
-                chatId: message.Chat.Id,
-                text: "Choose",
-                replyMarkup: replyKeyboardMarkup
-
+                chatId: ChatId,
+                text: "Выберите запрос",
+                replyMarkup: Keyboard
             );
         }
 
@@ -194,7 +188,19 @@ namespace TG_Bot.BusinessLayer
             switch (callbackQuery.Data)
             {
                 case "state":
+                    Monitor state = await _stateService.LastState();
+                    string result = state.ToStat();
+                    await _botClient.AnswerCallbackQueryAsync(
+                        callbackQuery.Id
+                    );
 
+                    await _botClient.SendTextMessageAsync(
+                        chatId: callbackQuery.Message.Chat.Id,
+                        text: result,
+                        replyMarkup: new InlineKeyboardMarkup(new[]
+                        {
+                            InlineKeyboardButton.WithCallbackData("Назад","back"),
+                        }));
                     break;
 
                 case "electricity":
@@ -209,20 +215,27 @@ namespace TG_Bot.BusinessLayer
 
                     break;
 
+                case "back":
+                    await _botClient.AnswerCallbackQueryAsync(
+                        callbackQuery.Id
+                    );
+                    await SendInlineKeyboard(callbackQuery.Message.Chat.Id);
+                    break;
+
                 default:
 
                     break;
             }
 
-            await _botClient.AnswerCallbackQueryAsync(
-                callbackQuery.Id,
-                $"Received {callbackQuery.Data}"
-            );
+            //await _botClient.AnswerCallbackQueryAsync(
+            //    callbackQuery.Id,
+            //    $"Received {callbackQuery.Data}"
+            //);
 
-            await _botClient.SendTextMessageAsync(
-                callbackQuery.Message.Chat.Id,
-                $"Received {callbackQuery.Data}"
-            );
+            //await _botClient.SendTextMessageAsync(
+            //    callbackQuery.Message.Chat.Id,
+            //    $"Received {callbackQuery.Data}"
+            //);
         }
 
         #region Inline Mode
@@ -334,8 +347,6 @@ namespace TG_Bot.BusinessLayer
             _stoppingCts.Token.Register(() =>
                 _logger.LogDebug($"Bot service stopping"));
 
-            //_botClient.OnMessage += Bot_OnMessage;
-
             // StartReceiving does not block the caller thread. Receiving is done on the ThreadPool.
             _botClient.StartReceiving(new DefaultUpdateHandler(HandleUpdateAsync, HandleErrorAsync), _stoppingCts.Token);
             _logger.LogInformation("Telegram bot started, waiting for messages");
@@ -344,14 +355,15 @@ namespace TG_Bot.BusinessLayer
         /// <inheritdoc />
         public async Task StopAsync(CancellationToken cancellationToken)
         {
+            _stoppingCts.Cancel();
+            _botClient?.StopReceiving();
             _logger.LogInformation("Bot service stoppped");
-            _botClient.StopReceiving();
         }
 
         /// <inheritdoc />
         public void Dispose()
         {
-            _stoppingCts.Cancel();
+            //Dispose
         }
     }
 }
