@@ -38,7 +38,6 @@ namespace TG_Bot
                     services.AddSingleton(LoggerFactory.Create(builder =>
                     {
                         builder.AddConsole(_ => _.FormatterName = "Monitoring");
-
                     }));
                     services.AddLogging();
                     services.AddMediatR(Assembly.GetExecutingAssembly());

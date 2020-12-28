@@ -26,8 +26,9 @@ namespace TG_Bot.BusinessLayer
     {
         private readonly ILogger<BotService> _logger;
         private readonly IStateService _stateService;
-        private readonly ITelegramBotClient _botClient;
-        private readonly CancellationTokenSource _stoppingCts =
+        private ITelegramBotClient _botClient;
+        private Task _executingTask;
+        private CancellationTokenSource _stoppingCts =
             new CancellationTokenSource();
 
         public InlineKeyboardMarkup Keyboard =>
@@ -83,7 +84,7 @@ namespace TG_Bot.BusinessLayer
 
         private async Task BotOnMessageReceived(Message message)
         {
-            Console.WriteLine($"Receive message type: {message.Type}");
+            _logger.LogInformation($"Receive message type: {message.Type}");
             if (message.Type != MessageType.Text)
                 return;
 
@@ -194,6 +195,11 @@ namespace TG_Bot.BusinessLayer
                         callbackQuery.Id
                     );
 
+                    await _botClient.EditMessageReplyMarkupAsync(
+                        chatId: callbackQuery.Message.Chat.Id,
+                        messageId: callbackQuery.Message.MessageId,
+                        replyMarkup: null);
+
                     await _botClient.SendTextMessageAsync(
                         chatId: callbackQuery.Message.Chat.Id,
                         text: result,
@@ -201,10 +207,30 @@ namespace TG_Bot.BusinessLayer
                         {
                             InlineKeyboardButton.WithCallbackData("Назад","back"),
                         }));
+
+                    _logger.LogInformation("Запрос состояния");
                     break;
 
                 case "electricity":
+                    // ответ
+                    await _botClient.AnswerCallbackQueryAsync(
+                        callbackQuery.Id
+                    );
+                    // результат
+                    // кнопка назад от результата
+                    // удалить кнопки меню от предыдущего сообщения
+                    await _botClient.EditMessageReplyMarkupAsync(
+                        chatId: callbackQuery.Message.Chat.Id,
+                        messageId: callbackQuery.Message.MessageId,
+                        replyMarkup: null);
 
+                    await _botClient.SendTextMessageAsync(
+                        chatId: callbackQuery.Message.Chat.Id,
+                        text: "Ololo",
+                        replyMarkup: new InlineKeyboardMarkup(new[]
+                        {
+                            InlineKeyboardButton.WithCallbackData("Назад","back"),
+                        }));
                     break;
 
                 case "heating":
@@ -219,23 +245,16 @@ namespace TG_Bot.BusinessLayer
                     await _botClient.AnswerCallbackQueryAsync(
                         callbackQuery.Id
                     );
-                    await SendInlineKeyboard(callbackQuery.Message.Chat.Id);
+                    await _botClient.EditMessageReplyMarkupAsync(
+                         chatId: callbackQuery.Message.Chat.Id,
+                         messageId: callbackQuery.Message.MessageId,
+                         replyMarkup: Keyboard);
                     break;
 
                 default:
 
                     break;
             }
-
-            //await _botClient.AnswerCallbackQueryAsync(
-            //    callbackQuery.Id,
-            //    $"Received {callbackQuery.Data}"
-            //);
-
-            //await _botClient.SendTextMessageAsync(
-            //    callbackQuery.Message.Chat.Id,
-            //    $"Received {callbackQuery.Data}"
-            //);
         }
 
         #region Inline Mode
@@ -344,25 +363,45 @@ namespace TG_Bot.BusinessLayer
         {
             _logger.LogDebug($"Bot service is starting.");
 
+            _stoppingCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
             _stoppingCts.Token.Register(() =>
                 _logger.LogDebug($"Bot service stopping"));
 
             // StartReceiving does not block the caller thread. Receiving is done on the ThreadPool.
-            _botClient.StartReceiving(new DefaultUpdateHandler(HandleUpdateAsync, HandleErrorAsync), _stoppingCts.Token);
+            _executingTask = new Task(() =>
+            {
+                _botClient.StartReceiving(new DefaultUpdateHandler(HandleUpdateAsync, HandleErrorAsync),
+                        _stoppingCts.Token);
+                _logger.LogInformation($"Telegram bot started receiveing");
+            }, _stoppingCts.Token);
+            _executingTask.Start();
+            //_botClient.StartReceiving(new DefaultUpdateHandler(HandleUpdateAsync, HandleErrorAsync), _stoppingCts.Token);
             _logger.LogInformation("Telegram bot started, waiting for messages");
         }
 
         /// <inheritdoc />
         public async Task StopAsync(CancellationToken cancellationToken)
         {
+            if (_executingTask == null)
+            {
+                return;
+            }
+
+            //_botClient.StopReceiving();
             _stoppingCts.Cancel();
-            _botClient?.StopReceiving();
+
+            await Task.WhenAny(_executingTask, Task.Delay(-1, cancellationToken));
+
+            cancellationToken.ThrowIfCancellationRequested();
             _logger.LogInformation("Bot service stoppped");
         }
 
         /// <inheritdoc />
         public void Dispose()
         {
+            _logger.LogInformation("Dispose");
+            Interlocked.Exchange(ref _botClient, null);
             //Dispose
         }
     }
