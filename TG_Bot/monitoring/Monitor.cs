@@ -20,7 +20,7 @@ namespace TG_Bot.monitoring
         /// Фаза 1
         /// </summary>
         [Column("D1")]
-        public float? PhaseOne { get; set; }
+        public float? Phase1 { get; set; }
 
         /// <summary>
         /// Фаза 2
