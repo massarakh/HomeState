@@ -31,5 +31,12 @@ namespace TG_Bot.DAL
         {
             return _context.Monitor.AsQueryable();
         }
+
+        /// <inheritdoc />
+        public async Task<string> GetElectricity()
+        {
+            var res = await GetState();
+            return $"";//TODO надо разобраться где возвращать
+        }
     }
 }

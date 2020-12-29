@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
+using NeoSmart.Unicode;
 
 namespace TG_Bot.monitoring
 {
@@ -82,11 +83,50 @@ namespace TG_Bot.monitoring
         [Column("D11")]
         public float? Heat { get; set; }
 
+        [NotMapped]
+        public string HeatFloor
+        {
+            get
+            {
+                int valHeat = Convert.ToInt32(Heat);
+                if (valHeat == 3 || valHeat == 9)
+                {
+                    //TODO вынести в DTO
+                    return new SingleEmoji(new UnicodeSequence("1F7E2"), "green circle", new[] { "green", "circle" }, 1).ToString();
+                    //return "Вкл.";
+                }
+                return new SingleEmoji(new UnicodeSequence("1F534"), "red circle", new[] { "red", "circle" }, 1).ToString();
+                //return "Выкл.";
+            }
+        }
+
+        [NotMapped]
+        public string HeatBatteries
+        {
+            get
+            {
+                int valHeat = Convert.ToInt32(Heat);
+                if (valHeat == 6 || valHeat == 9)
+                {
+                    //return "Вкл.";
+                    return new SingleEmoji(new UnicodeSequence("1F7E2"), "green circle", new[] { "green", "circle" }, 1).ToString();
+                }
+                return new SingleEmoji(new UnicodeSequence("1F534"), "red circle", new[] { "red", "circle" }, 1).ToString();
+                //return "Выкл.";
+            }
+        }
+
         /// <summary>
         /// Бойлер
         /// </summary>
         [Column("D12")]
         public float? Boiler { get; set; }
+
+        [NotMapped]
+        public string BoilerState => Convert.ToInt32(Boiler) == 0 ?
+            new SingleEmoji(new UnicodeSequence("1F534"), "red circle", new[] { "red", "circle" }, 1).ToString()
+            : new SingleEmoji(new UnicodeSequence("1F7E2"), "green circle", new[] { "green", "circle" }, 1).ToString();
+        //public string BoilerState => Convert.ToInt32(Boiler) == 0 ? "Выкл." : "Вкл.";
 
         /// <summary>
         /// Потребляемая мощность в кВт*ч
