@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using TG_Bot.BusinessLayer;
 using TG_Bot.monitoring;
 
 namespace TG_Bot.DAL
@@ -19,11 +20,42 @@ namespace TG_Bot.DAL
         }
 
         /// <inheritdoc />
-        public async Task<Monitor> GetState()
+        public async Task<Data> GetState()
         {
-            return await _context.Monitor
+            var state = await _context.Monitor
                 .OrderByDescending(d => d.Timestamp)
                 .FirstOrDefaultAsync();
+
+            return new Data
+            {
+                Boiler = Convert.ToInt32(state.Boiler) == 10,
+                Electricity = new Electricity
+                {
+                    Phase1 = state.Phase1,
+                    Phase2 = state.Phase2,
+                    Phase3 = state.Phase3,
+                    PhaseSumm = state.PhaseSumm
+                },
+                Energy = state.Energy.ToString(),
+                Heat = new Heat
+                {
+                    Batteries = Convert.ToInt32(state.Heat) == 6 || Convert.ToInt32(state.Heat) == 9,
+                    Floor = Convert.ToInt32(state.Heat) == 3 || Convert.ToInt32(state.Heat) == 9
+                },
+                Humidity = new Humidity
+                {
+                    Bedroom = state.HumidityBedroom,
+                    LivingRoom = state.HumidityLivingRoom
+                },
+                Temperature = new Temperature
+                {
+                    Barn = state.TemperatureBarn,
+                    Bedroom = state.TemperatureBedroom,
+                    LivingRoom = state.TemperatureLivingRoom,
+                    Outside = state.TemperatureOutside
+                },
+                Timestamp = state.Timestamp?.ToString("H':'mm':'ss d MMM yyyy")
+            };
         }
 
         /// <inheritdoc />
@@ -33,10 +65,31 @@ namespace TG_Bot.DAL
         }
 
         /// <inheritdoc />
-        public async Task<string> GetElectricity()
+        public async Task<Electricity> GetElectricity()
         {
-            var res = await GetState();
-            return $"";//TODO надо разобраться где возвращать
+            var state = await GetState();
+            return state.Electricity;
+        }
+
+        /// <inheritdoc />
+        public async Task<Heat> GetHeating()
+        {
+            var state = await GetState();
+            return state.Heat;
+        }
+
+        /// <inheritdoc />
+        public async Task<Temperature> GetTemperatures()
+        {
+            var state = await GetState();
+            return state.Temperature;
+        }
+
+        /// <inheritdoc />
+        public async Task<Humidity> GetHumidity()
+        {
+            var state = await GetState();
+            return state.Humidity;
         }
     }
 }

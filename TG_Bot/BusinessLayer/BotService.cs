@@ -186,59 +186,31 @@ namespace TG_Bot.BusinessLayer
         // Process Inline Keyboard callback data
         private async Task BotOnCallbackQueryReceived(CallbackQuery callbackQuery)
         {
+            string userName = callbackQuery.Message.Chat.Username;
             switch (callbackQuery.Data)
             {
                 case "state":
-                    Monitor state = await _stateService.LastState();
-                    string result = state.ToStat();
-                    await _botClient.AnswerCallbackQueryAsync(
-                        callbackQuery.Id
-                    );
-
-                    await _botClient.EditMessageReplyMarkupAsync(
-                        chatId: callbackQuery.Message.Chat.Id,
-                        messageId: callbackQuery.Message.MessageId,
-                        replyMarkup: null);
-
-                    await _botClient.SendTextMessageAsync(
-                        chatId: callbackQuery.Message.Chat.Id,
-                        text: result,
-                        replyMarkup: new InlineKeyboardMarkup(new[]
-                        {
-                            InlineKeyboardButton.WithCallbackData("Назад","back"),
-                        }));
-
-                    _logger.LogInformation("Запрос состояния");
+                    var state = await _stateService.LastState();
+                    await Answer(callbackQuery, state);
+                    _logger.LogInformation($"Запрос состояния от {userName}");
                     break;
 
                 case "electricity":
-                    // ответ
-                    await _botClient.AnswerCallbackQueryAsync(
-                        callbackQuery.Id
-                    );
-                    // результат
-                    // кнопка назад от результата
-                    // удалить кнопки меню от предыдущего сообщения
-                    await _botClient.EditMessageReplyMarkupAsync(
-                        chatId: callbackQuery.Message.Chat.Id,
-                        messageId: callbackQuery.Message.MessageId,
-                        replyMarkup: null);
-
-                    await _botClient.SendTextMessageAsync(
-                        chatId: callbackQuery.Message.Chat.Id,
-                        text: "Ololo",
-                        replyMarkup: new InlineKeyboardMarkup(new[]
-                        {
-                            InlineKeyboardButton.WithCallbackData("Назад","back"),
-                        }));
+                    var electricity = await _stateService.Electricity();
+                    await Answer(callbackQuery, electricity);
+                    _logger.LogInformation($"Запрос показаний по электричеству от {userName}");
                     break;
 
                 case "heating":
-
+                    var heating = await _stateService.Heating();
+                    await Answer(callbackQuery, heating);
+                    _logger.LogInformation($"Запрос состояния нагревательных элементов от {userName}");
                     break;
 
                 case "temperature":
-
+                    var temperature = await _stateService.Temperature();
+                    await Answer(callbackQuery, temperature);
+                    _logger.LogInformation($"Запрос показаний температуры от {userName}");
                     break;
 
                 case "back":
@@ -255,6 +227,36 @@ namespace TG_Bot.BusinessLayer
 
                     break;
             }
+            
+        }
+
+        /// <summary>
+        /// Ответ
+        /// </summary>
+        /// <param name="callbackQuery">Callback запрос</param>
+        /// <param name="result">Строка для ответа</param>
+        /// <returns>Инстанс таски для возврата</returns>
+        private async Task Answer(CallbackQuery callbackQuery, string result)
+        {
+            //ответ
+            await _botClient.AnswerCallbackQueryAsync(
+                callbackQuery.Id
+            );
+
+            //удаление главной клавиатуры
+            await _botClient.EditMessageReplyMarkupAsync(
+                chatId: callbackQuery.Message.Chat.Id,
+                messageId: callbackQuery.Message.MessageId,
+                replyMarkup: null);
+
+            //отправка результата + кнопка "Назад"
+            await _botClient.SendTextMessageAsync(
+                chatId: callbackQuery.Message.Chat.Id,
+                text: result,
+                replyMarkup: new InlineKeyboardMarkup(new[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Назад", "back"),
+                }));
         }
 
         #region Inline Mode
@@ -303,59 +305,6 @@ namespace TG_Bot.BusinessLayer
             };
 
             Console.WriteLine(ErrorMessage);
-        }
-
-        private async void Bot_OnMessage(object sender, MessageEventArgs e)
-        {
-            //https://github.com/TelegramBots/Telegram.Bot.Examples/blob/master/Telegram.Bot.Examples.Polling/Program.cs
-            if (e.Message.Text != null)
-            {
-                _logger.LogInformation($"Received a text message in chat {e.Message.Chat.Id}.");
-                InlineKeyboardMarkup inlineKeyboard = null;
-                switch (e.Message.Text)
-                {
-                    case "/start":
-                        //отправить клавиатуру выбора
-                        //старт
-                        inlineKeyboard = new InlineKeyboardMarkup(new[]
-                        {
-                            InlineKeyboardButton.WithCallbackData("Состояние","state"),
-                            InlineKeyboardButton.WithCallbackData("Последнее значение","last"),
-                        });
-                        await _botClient.SendTextMessageAsync(
-                            chatId: e.Message.Chat.Id,
-                            text: "Запрос",
-                            replyMarkup: inlineKeyboard);
-                        break;
-
-                    case "/state":
-                        var state = await _stateService.LastState();
-                        inlineKeyboard = new InlineKeyboardMarkup(new[]
-                        {
-                            InlineKeyboardButton.WithCallbackData("Состояние","state"),
-                            InlineKeyboardButton.WithCallbackData("Последнее значение","last"),
-                        });
-                        await _botClient.SendTextMessageAsync(
-                            chatId: e.Message.Chat.Id,
-                            text: "Температура в спальне: " + state.TemperatureLivingRoom.ToString() + "°C",
-                            replyMarkup: inlineKeyboard);
-                        break;
-
-                    case "last":
-
-                        break;
-
-                    default:
-
-                        break;
-                }
-
-
-                //await _botClient.SendTextMessageAsync(
-                //    chatId: e.Message.Chat,
-                //    text: "You said:\n" + e.Message.Text
-                //);
-            }
         }
 
         /// <inheritdoc />
