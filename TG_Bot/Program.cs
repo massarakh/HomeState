@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Reflection;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,7 +28,7 @@ namespace TG_Bot
                 {
                     string envAppSettings = $"appsettings.json".ToLower();
                     //string envAppSettings = $"appsettings.{context.HostingEnvironment.EnvironmentName}.json".ToLower();
-                    var configuration = new ConfigurationBuilder()
+                    IConfigurationRoot configuration = new ConfigurationBuilder()
                     .SetBasePath(Directory.GetParent(AppContext.BaseDirectory).FullName)
                      .AddJsonFile(envAppSettings, optional: true, reloadOnChange: true)
                      .AddEnvironmentVariables()
@@ -40,13 +39,12 @@ namespace TG_Bot
                         builder.AddConsole(_ => _.FormatterName = "Monitoring");
                     }));
                     services.AddLogging();
-                    services.AddMediatR(Assembly.GetExecutingAssembly());
                     services.AddScoped<IStateRepository, StateRepository>();
+                    services.AddScoped<ICamService, CamService>();
                     services.AddScoped<IStateService, StateService>();
                     services.AddScoped<IBotService, BotService>();
                     services.AddSingleton(configuration);
                     services.AddHostedService<BotService>();
-                    //services.AddSingleton<>();
                     var connectionString = context.Configuration.GetConnectionString("DefaultConnection");
                     services.AddDbContext<_4stasContext>(options =>
                     {

@@ -26,12 +26,16 @@ namespace TG_Bot.BusinessLayer
     {
         private readonly ILogger<BotService> _logger;
         private readonly IStateService _stateService;
+        private readonly ICamService _camService;
         private ITelegramBotClient _botClient;
         private Task _executingTask;
         private CancellationTokenSource _stoppingCts =
             new CancellationTokenSource();
 
-        public InlineKeyboardMarkup Keyboard =>
+        /// <summary>
+        /// Основная клавиатура
+        /// </summary>
+        private InlineKeyboardMarkup _keyboard =>
             new InlineKeyboardMarkup(new[]
             {
                 new[]
@@ -44,13 +48,35 @@ namespace TG_Bot.BusinessLayer
                 {
                     InlineKeyboardButton.WithCallbackData("Нагрев", "heating"),
                     InlineKeyboardButton.WithCallbackData("Температура", "temperature"),
+                },
+                new []
+                {
+                    InlineKeyboardButton.WithCallbackData("Камеры","cameras"),
                 }
             });
 
-        public BotService(ILogger<BotService> logger, IStateService stateService)
+        /// <summary>
+        /// Клавиатура с камерами
+        /// </summary>
+        private InlineKeyboardMarkup _camerasKeyboard =>
+            new InlineKeyboardMarkup(new[]
+        {
+            new[]
+            {
+                InlineKeyboardButton.WithCallbackData("Въезд", "entrance"),
+                InlineKeyboardButton.WithCallbackData("Двор", "yard"),
+            },
+            new []
+            {
+                InlineKeyboardButton.WithCallbackData("Назад", "back")
+            }
+        });
+
+        public BotService(ILogger<BotService> logger, IStateService stateService, ICamService camService)
         {
             _logger = logger;
             _stateService = stateService;
+            _camService = camService;
             _botClient = new TelegramBotClient("1456907202:AAF50prIIafWzAKJlN2ghWit9ViKZWVhOVM");
         }
 
@@ -112,11 +138,11 @@ namespace TG_Bot.BusinessLayer
             switch (message.Text)
             {
                 case "/start":
-                    inlineKeyboard = Keyboard;
+                    inlineKeyboard = _keyboard;
                     break;
 
                 default:
-                    inlineKeyboard = Keyboard;
+                    inlineKeyboard = _keyboard;
                     break;
             }
 
@@ -134,7 +160,7 @@ namespace TG_Bot.BusinessLayer
             await _botClient.SendTextMessageAsync(
                 chatId: ChatId,
                 text: "Выберите запрос",
-                replyMarkup: Keyboard
+                replyMarkup: _keyboard
             );
         }
 
@@ -143,8 +169,9 @@ namespace TG_Bot.BusinessLayer
             await _botClient.SendChatActionAsync(message.Chat.Id, ChatAction.UploadPhoto);
 
             const string filePath = @"Files/tux.png";
-            using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using FileStream fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
             var fileName = filePath.Split(Path.DirectorySeparatorChar).Last();
+
             await _botClient.SendPhotoAsync(
                 chatId: message.Chat.Id,
                 photo: new InputOnlineFile(fileStream, fileName),
@@ -220,14 +247,14 @@ namespace TG_Bot.BusinessLayer
                     await _botClient.EditMessageReplyMarkupAsync(
                          chatId: callbackQuery.Message.Chat.Id,
                          messageId: callbackQuery.Message.MessageId,
-                         replyMarkup: Keyboard);
+                         replyMarkup: _keyboard);
                     break;
 
                 default:
 
                     break;
             }
-            
+
         }
 
         /// <summary>
