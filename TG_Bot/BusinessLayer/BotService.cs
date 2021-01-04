@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Telegram.Bot;
@@ -18,6 +19,7 @@ using Telegram.Bot.Types.InputFiles;
 using Telegram.Bot.Types.ReplyMarkups;
 using TG_Bot.DAL;
 using TG_Bot.Helpers;
+using File = System.IO.File;
 using Monitor = TG_Bot.monitoring.Monitor;
 
 namespace TG_Bot.BusinessLayer
@@ -27,9 +29,10 @@ namespace TG_Bot.BusinessLayer
         private readonly ILogger<BotService> _logger;
         private readonly IStateService _stateService;
         private readonly ICamService _camService;
+        private readonly IConfiguration _configuration;
         private ITelegramBotClient _botClient;
         private Task _executingTask;
-        private CancellationTokenSource _stoppingCts =
+        private readonly CancellationTokenSource _stoppingCts =
             new CancellationTokenSource();
 
         /// <summary>
@@ -72,12 +75,36 @@ namespace TG_Bot.BusinessLayer
             }
         });
 
-        public BotService(ILogger<BotService> logger, IStateService stateService, ICamService camService)
+        private string BotToken
+        {
+            get
+            {
+                IEnumerable<IConfigurationSection> sections = _configuration.GetSection("BotConfiguration").GetChildren();
+                var token = sections.FirstOrDefault(_ => _.Key == "BotToken");
+                if (token == null)
+                {
+                    _logger.LogError($"Не найден токен для бота, выход");
+                    return string.Empty;
+                }
+
+                return token.Value;
+            }
+        }
+
+        public BotService(ILogger<BotService> logger, IStateService stateService, ICamService camService, IConfiguration configuration)
         {
             _logger = logger;
             _stateService = stateService;
             _camService = camService;
-            _botClient = new TelegramBotClient("1456907202:AAF50prIIafWzAKJlN2ghWit9ViKZWVhOVM");
+            _configuration = configuration;
+            //if (string.IsNullOrEmpty(BotToken))
+            //{
+            //    _stoppingCts.Cancel();
+            //}
+            //else
+            //{
+            //    _botClient = new TelegramBotClient(BotToken);
+            //}
         }
 
         public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
@@ -154,15 +181,15 @@ namespace TG_Bot.BusinessLayer
             );
         }
 
-        async Task SendInlineKeyboard(long ChatId)
-        {
-            await _botClient.SendChatActionAsync(ChatId, ChatAction.Typing);
-            await _botClient.SendTextMessageAsync(
-                chatId: ChatId,
-                text: "Выберите запрос",
-                replyMarkup: _keyboard
-            );
-        }
+        //async Task SendInlineKeyboard(long ChatId)
+        //{
+        //    await _botClient.SendChatActionAsync(ChatId, ChatAction.Typing);
+        //    await _botClient.SendTextMessageAsync(
+        //        chatId: ChatId,
+        //        text: "Выберите запрос",
+        //        replyMarkup: _keyboard
+        //    );
+        //}
 
         async Task SendFile(Message message)
         {
@@ -219,25 +246,87 @@ namespace TG_Bot.BusinessLayer
                 case "state":
                     var state = await _stateService.LastState();
                     await Answer(callbackQuery, state);
-                    _logger.LogInformation($"Запрос состояния от {userName}");
+                    _logger.LogInformation(string.IsNullOrEmpty(callbackQuery.From.FirstName)
+                        ? $"Запрос состояния"
+                        : $"Запрос состояния от {callbackQuery.From.FirstName}");
                     break;
 
                 case "electricity":
                     var electricity = await _stateService.Electricity();
                     await Answer(callbackQuery, electricity);
-                    _logger.LogInformation($"Запрос показаний по электричеству от {userName}");
+                    _logger.LogInformation(string.IsNullOrEmpty(callbackQuery.From.FirstName)
+                        ? $"Запрос показаний по электричеству"
+                        : $"Запрос показаний по электричеству от {callbackQuery.From.FirstName}");
                     break;
 
                 case "heating":
                     var heating = await _stateService.Heating();
                     await Answer(callbackQuery, heating);
-                    _logger.LogInformation($"Запрос состояния нагревательных элементов от {userName}");
+                    _logger.LogInformation(string.IsNullOrEmpty(callbackQuery.From.FirstName)
+                        ? $"Запрос состояния нагревательных элементов"
+                        : $"Запрос состояния нагревательных элементов от {callbackQuery.From.FirstName}");
                     break;
 
                 case "temperature":
                     var temperature = await _stateService.Temperature();
                     await Answer(callbackQuery, temperature);
-                    _logger.LogInformation($"Запрос показаний температуры от {userName}");
+                    _logger.LogInformation(string.IsNullOrEmpty(callbackQuery.From.FirstName)
+                        ? $"Запрос показаний температуры"
+                        : $"Запрос показаний температуры от {callbackQuery.From.FirstName}");
+                    break;
+
+                case "cameras":
+                    await _botClient.AnswerCallbackQueryAsync(
+                        callbackQuery.Id
+                    );
+
+                    //удаление главной клавиатуры
+                    await _botClient.EditMessageReplyMarkupAsync(
+                        chatId: callbackQuery.Message.Chat.Id,
+                        messageId: callbackQuery.Message.MessageId,
+                        replyMarkup: _camerasKeyboard);
+                    break;
+
+                case "entrance":
+                    //ответ на кнопку
+                    await _botClient.AnswerCallbackQueryAsync(
+                        callbackQuery.Id
+                    );
+                    // Показываем статус отправки фото
+                    await _botClient.SendChatActionAsync(callbackQuery.Message.Chat.Id, ChatAction.UploadPhoto);
+                    string filePath = string.Empty;
+                    //отправка фото
+                    try
+                    {
+                        filePath = _camService.GetEntranceCam(out var fileName);
+                        await using FileStream fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                        await _botClient.SendPhotoAsync(
+                            chatId: callbackQuery.Message.Chat.Id,
+                            photo: new InputOnlineFile(fileStream, fileName),
+                            replyMarkup: _camerasKeyboard
+                        );
+
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError($"Ошибка получения изображения с камеры въезда - {ex.Message}");
+                        await _botClient.SendTextMessageAsync(
+                            chatId: callbackQuery.Message.Chat.Id,
+                            text: "Невозможно получить изображение с камеры въезда",
+                            replyMarkup: _camerasKeyboard);
+                    }
+
+                    _logger.LogInformation(string.IsNullOrEmpty(callbackQuery.From.FirstName)
+                        ? $"Запрос изображения с камеры въезда"
+                        : $"Запрос изображения с камеры въезда от {callbackQuery.From.FirstName}");
+                    try
+                    {
+                        File.Delete(filePath);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning($"Не удалось удалить изображение с камеры из временной директории - {ex.Message}");
+                    }
                     break;
 
                 case "back":
@@ -338,11 +427,20 @@ namespace TG_Bot.BusinessLayer
         public async Task StartAsync(CancellationToken cancellationToken)
         {
             _logger.LogDebug($"Bot service is starting.");
-
-            _stoppingCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-
+            // TODO разобраться с отменой задач
+            CancellationTokenSource.CreateLinkedTokenSource(_stoppingCts.Token, cancellationToken);
+            //_stoppingCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             _stoppingCts.Token.Register(() =>
                 _logger.LogDebug($"Bot service stopping"));
+
+            if (string.IsNullOrEmpty(BotToken))
+            {
+                _stoppingCts.Cancel();
+            }
+            else
+            {
+                _botClient = new TelegramBotClient(BotToken);
+            }
 
             // StartReceiving does not block the caller thread. Receiving is done on the ThreadPool.
             _executingTask = new Task(() =>
@@ -351,9 +449,18 @@ namespace TG_Bot.BusinessLayer
                         _stoppingCts.Token);
                 _logger.LogInformation($"Telegram bot started receiveing");
             }, _stoppingCts.Token);
-            _executingTask.Start();
-            //_botClient.StartReceiving(new DefaultUpdateHandler(HandleUpdateAsync, HandleErrorAsync), _stoppingCts.Token);
-            _logger.LogInformation("Telegram bot started, waiting for messages");
+
+            try
+            {
+                _executingTask.Start();
+                _logger.LogInformation("Telegram bot started, waiting for messages");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Работа бота отменена, не найден токен");
+            }
+            //_stoppingCts.Token.ThrowIfCancellationRequested();
+            await _executingTask;
         }
 
         /// <inheritdoc />
@@ -377,7 +484,16 @@ namespace TG_Bot.BusinessLayer
         public void Dispose()
         {
             _logger.LogInformation("Dispose");
+            _executingTask.Dispose();
+            try
+            {
+                _botClient.StopReceiving();
+            }
+            catch (Exception ex)
+            {
+            }
             Interlocked.Exchange(ref _botClient, null);
+            _stoppingCts.Dispose();
             //Dispose
         }
     }

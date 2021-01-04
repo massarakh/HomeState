@@ -9,7 +9,7 @@ namespace TG_Bot.BusinessLayer
         /// </summary>
         /// <param name="fileName">Имя файла</param>
         /// <returns>Поток</returns>
-        MemoryStream GetEntranceCam(out string fileName);
+        string GetEntranceCam(out string fileName);
 
         /// <summary>
         /// Получение изображения с камеры двора

@@ -1,21 +1,32 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Reflection;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace TG_Bot.BusinessLayer
 {
     public class CamService : ICamService
     {
+        private readonly ILogger<CamService> _logger;
         private IConfiguration _configuration { get; }
 
-        public string EntranceCam
+        private string EntranceCam
         {
             get
             {
-                var t = _configuration["EntranceCam"];
-                return string.Empty;
+                IEnumerable<IConfigurationSection> sections = _configuration.GetSection("EntranceCam").GetChildren();
+                var cam = sections.FirstOrDefault(_ => _.Key == "snapshot");
+                if (cam == null)
+                {
+                    _logger.LogError($"Не найден адрес для камеры въезда, выход");
+                    return string.Empty;
+                }
+
+                return cam.Value;
             }
         }
 
@@ -34,23 +45,25 @@ namespace TG_Bot.BusinessLayer
 
         public string CamFileName => DateTime.Now.ToString("H'_'mm'_'ss d MMM yyyy") + ".jpg";
 
-        public CamService(IConfiguration configuration)
+        public CamService(IConfiguration configuration, ILogger<CamService> logger)
         {
+            _logger = logger;
             _configuration = configuration;
         }
         /// <inheritdoc />
-        public MemoryStream GetEntranceCam(out string fileName)
+        public string GetEntranceCam(out string fileName)
         {
             // Определение пути
             string fileNameToSave = "EntranceCam_" + CamFileName;
             fileName = fileNameToSave;
-            string pathToSave = Path.Combine(LocationToSave, fileName);
-
+            string pathToSave = Path.Combine(Path.GetTempPath(), fileNameToSave);
             // Сохранение в файл
             try
             {
-                using WebClient client = new WebClient();
-                client.DownloadFile(EntranceCam, pathToSave);
+                using (WebClient client = new WebClient())
+                {
+                    client.DownloadFile(EntranceCam, pathToSave);
+                }
             }
             catch (Exception ex)
             {
@@ -63,13 +76,13 @@ namespace TG_Bot.BusinessLayer
             }
 
             // Отдача потока и имени
-            MemoryStream destination = new MemoryStream();
-            using (FileStream fs = new FileStream(pathToSave, FileMode.Open, FileAccess.Read, FileShare.Read))
-            {
-                fs.CopyTo(destination);
-            }
+            //MemoryStream destination = new MemoryStream();
+            //using (FileStream fs = new FileStream(pathToSave, FileMode.Open, FileAccess.Read, FileShare.Read))
+            //{
+            //    fs.CopyTo(destination);
+            //}
 
-            return destination;
+            return pathToSave;
         }
 
         /// <inheritdoc />
