@@ -329,6 +329,50 @@ namespace TG_Bot.BusinessLayer
                     }
                     break;
 
+                case "yard":
+                    //ответ на кнопку
+                    await _botClient.AnswerCallbackQueryAsync(
+                        callbackQuery.Id
+                    );
+                    string filePathToDelete = string.Empty;
+                    // Показываем статус отправки фото
+                    await _botClient.SendChatActionAsync(callbackQuery.Message.Chat.Id, ChatAction.UploadPhoto);
+                    //отправка фото
+                    try
+                    {
+                        //TODO добавить ожидание изображения
+                        var (fileP, fileName) = await _camService.GetYardCam();
+                        filePathToDelete = fileP;
+                        await using FileStream fileStream = new FileStream(fileP, FileMode.Open, FileAccess.Read, FileShare.Read);
+                        await _botClient.SendPhotoAsync(
+                            chatId: callbackQuery.Message.Chat.Id,
+                            photo: new InputOnlineFile(fileStream, fileName),
+                            replyMarkup: _camerasKeyboard
+                        );
+
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex.Message);
+                        await _botClient.SendTextMessageAsync(
+                            chatId: callbackQuery.Message.Chat.Id,
+                            text: "Невозможно получить изображение с камеры двора",
+                            replyMarkup: _camerasKeyboard);
+                    }
+
+                    _logger.LogInformation(string.IsNullOrEmpty(callbackQuery.From.FirstName)
+                        ? $"Запрос изображения с камеры двора"
+                        : $"Запрос изображения с камеры двора от {callbackQuery.From.FirstName}");
+                    try
+                    {
+                        File.Delete(filePathToDelete);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning($"Не удалось удалить изображение с камеры из временной директории - {ex.Message}");
+                    }
+                    break;
+
                 case "back":
                     await _botClient.AnswerCallbackQueryAsync(
                         callbackQuery.Id

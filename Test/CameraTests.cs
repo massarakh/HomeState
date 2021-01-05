@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Reflection;
@@ -45,55 +46,76 @@ namespace Test
 
             Assert.True(File.Exists(PathDir));
 
+        }
 
-            //CancellationTokenSource cts = new CancellationTokenSource();
-            //try
-            //{
-            //    string codeBase = Assembly.GetExecutingAssembly().Location;
-            //    UriBuilder uri = new UriBuilder(codeBase);
-            //    string tmp = Uri.UnescapeDataString(uri.Path);
-            //    string dirName = "frames";
-            //    var PathDir = Path.GetDirectoryName(tmp);
-            //    PathDir = System.IO.Path.Combine(PathDir, dirName);
-            //    if (!Directory.Exists(PathDir))
-            //        Directory.CreateDirectory(PathDir);
+        [Fact]
+        public void FfmpegInstalled()
+        {
+            try
+            {
+                // create the ProcessStartInfo using "cmd" as the program to be run,
+                // and "/c " as the parameters.
+                // Incidentally, /c tells cmd that we want it to execute the command that follows,
+                // and then exit.
+                ProcessStartInfo procStartInfo =
+                    new System.Diagnostics.ProcessStartInfo("cmd", "/c " + "ffmpeg -version")
+                    {
+                        RedirectStandardOutput = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    };
 
-            //    //int intervalMs = options.Interval * 1000;
-            //    //int lastTimeSnapshotSaved = Environment.TickCount - intervalMs;
+                // The following commands are needed to redirect the standard output.
+                // This means that it will be redirected to the Process.StandardOutput StreamReader.
+                // Do not create the black window.
+                // Now we create a process, assign its ProcessStartInfo and start it
+                Process proc = new System.Diagnostics.Process
+                {
+                    StartInfo = procStartInfo
+                };
+                proc.Start();
+                // Get the output into a string
+                string result = proc.StandardOutput.ReadLine();
+                // Display the command output.
+                _testOutputHelper.WriteLine(result);
+                //"ffmpeg version 4.2.2 Copyright (c) 2000-2019 the FFmpeg developers"
+                Assert.True(result.Contains("ffmpeg version"));
+            }
+            catch (Exception objException)
+            {
+                _testOutputHelper.WriteLine($"Error - {objException.Message}");
+            }
+        }
 
-            //    var connectionParameters = new ConnectionParameters(new Uri("rtsp://admin:123456@192.168.0.9:554/mpeg4"), new NetworkCredential("admin", "123456"));
-            //    using (var rtspClient = new RtspClient(connectionParameters))
-            //    {
-            //        rtspClient.FrameReceived += (sender, frame) =>
-            //        {
-            //            if (!(frame is RawJpegFrame))
-            //                return;
+        [Fact]
+        public void GetFfmegPicture()
+        {
+            string path = Path.GetTempPath() + "cam2.jpg";
+            ProcessStartInfo procStartInfo =
+                new System.Diagnostics.ProcessStartInfo("cmd", "/c " +
+                   "ffmpeg -i rtsp://192.168.0.10:554/user=admin_password=tlJwpbo6_channel=1_stream=0.sdp?real_stream -r 1 -f image2 -frames:v 1 " + path)
+                {
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
 
-            //            string snapshotName = frame.Timestamp.ToString("O").Replace(":", "_") + ".jpg";
-            //            string path = Path.Combine(PathDir, snapshotName);
+            Process proc = new System.Diagnostics.Process
+            {
+                StartInfo = procStartInfo
+            };
+            proc.Start();
+            //string result = proc.StandardOutput.ReadLine();
+            //_testOutputHelper.WriteLine(result);
 
-            //            ArraySegment<byte> frameSegment = frame.FrameSegment;
-
-            //            using (var stream = File.OpenWrite(path))
-            //                stream.Write(frameSegment.Array, frameSegment.Offset, frameSegment.Count);
-
-            //            _testOutputHelper.WriteLine($"[{DateTime.UtcNow}] Snapshot is saved to {snapshotName}");
-            //        };
-
-            //        _testOutputHelper.WriteLine("Connecting...");
-            //        await rtspClient.ConnectAsync(cts.Token);
-            //        _testOutputHelper.WriteLine("Receiving...");
-            //        await rtspClient.ReceiveAsync(cts.Token);
-            //    }
-            //}
-            //catch (OperationCanceledException)
-            //{
-            //}
-            //catch (Exception e)
-            //{
-            //    _testOutputHelper.WriteLine(e.ToString());
-            //}
-            //Assert.True(true);
+            Assert.True(File.Exists(path));
+            try
+            {
+                File.Delete(path);
+            }
+            catch
+            {
+            }
         }
     }
 }

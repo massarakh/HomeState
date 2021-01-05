@@ -1,4 +1,6 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
+using System.Threading.Tasks;
 
 namespace TG_Bot.BusinessLayer
 {
@@ -14,8 +16,7 @@ namespace TG_Bot.BusinessLayer
         /// <summary>
         /// Получение изображения с камеры двора
         /// </summary>
-        /// <param name="fileName">Имя файла</param>
         /// <returns>Поток</returns>
-        FileStream GetYardCam(out string fileName);
+        Task<Tuple<string, string>> GetYardCam();
     }
 }
