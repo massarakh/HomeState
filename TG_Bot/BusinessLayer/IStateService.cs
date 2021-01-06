@@ -8,6 +8,13 @@ namespace TG_Bot.BusinessLayer
 {
     public interface IStateService
     {
-        Task<Monitor> LastState();
+        Task<string> LastState();
+
+        Task<string> Electricity();
+
+        Task<string> Temperature();
+        
+        Task<string> Heating();
+
     }
 }

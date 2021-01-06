@@ -7,10 +7,9 @@ namespace TG_Bot.Helpers
 {
     public static class Extensions
     {
-        public static string ToStat(this Monitor state)
+        public static string ToFormatted(this bool state)
         {
-            return $"Фаза 1: {state.Phase1} А\n" +
-                   $"Фаза 2: {state.Phase2} A";
+            return state ? "Вкл." : "Выкл.";
         }
     }
 }
