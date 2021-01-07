@@ -31,7 +31,7 @@ namespace TG_Bot
                     IConfigurationRoot configuration = new ConfigurationBuilder()
                     .SetBasePath(Directory.GetParent(AppContext.BaseDirectory).FullName)
                      .AddJsonFile(envAppSettings, optional: true, reloadOnChange: true)
-                     .AddEnvironmentVariables()
+                     //.AddEnvironmentVariables()
                     .Build();
 
                     services.AddSingleton(LoggerFactory.Create(builder =>

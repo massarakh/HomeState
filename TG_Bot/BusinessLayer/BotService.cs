@@ -2,14 +2,12 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Telegram.Bot;
-using Telegram.Bot.Args;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Extensions.Polling;
 using Telegram.Bot.Types;
@@ -17,10 +15,7 @@ using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.InlineQueryResults;
 using Telegram.Bot.Types.InputFiles;
 using Telegram.Bot.Types.ReplyMarkups;
-using TG_Bot.DAL;
-using TG_Bot.Helpers;
 using File = System.IO.File;
-using Monitor = TG_Bot.monitoring.Monitor;
 
 namespace TG_Bot.BusinessLayer
 {
@@ -34,6 +29,7 @@ namespace TG_Bot.BusinessLayer
         private Task _executingTask;
         private readonly CancellationTokenSource _stoppingCts =
             new CancellationTokenSource();
+        private CancellationToken Token => _stoppingCts.Token;
 
         /// <summary>
         /// Основная клавиатура
@@ -75,6 +71,9 @@ namespace TG_Bot.BusinessLayer
             }
         });
 
+        /// <summary>
+        /// Получение токена телеграм бота
+        /// </summary>
         private string BotToken
         {
             get
@@ -86,7 +85,6 @@ namespace TG_Bot.BusinessLayer
                     _logger.LogError($"Не найден токен для бота, выход");
                     return string.Empty;
                 }
-
                 return token.Value;
             }
         }
@@ -97,14 +95,6 @@ namespace TG_Bot.BusinessLayer
             _stateService = stateService;
             _camService = camService;
             _configuration = configuration;
-            //if (string.IsNullOrEmpty(BotToken))
-            //{
-            //    _stoppingCts.Cancel();
-            //}
-            //else
-            //{
-            //    _botClient = new TelegramBotClient(BotToken);
-            //}
         }
 
         public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
@@ -115,7 +105,7 @@ namespace TG_Bot.BusinessLayer
                 UpdateType.EditedMessage => BotOnMessageReceived(update.Message),
                 UpdateType.CallbackQuery => BotOnCallbackQueryReceived(update.CallbackQuery),
                 UpdateType.InlineQuery => BotOnInlineQueryReceived(update.InlineQuery),
-                UpdateType.ChosenInlineResult => BotOnChosenInlineResultReceived(update.ChosenInlineResult),
+                //UpdateType.ChosenInlineResult => BotOnChosenInlineResultReceived(update.ChosenInlineResult),
                 // UpdateType.Unknown:
                 // UpdateType.ChannelPost:
                 // UpdateType.EditedChannelPost:
@@ -137,7 +127,7 @@ namespace TG_Bot.BusinessLayer
 
         private async Task BotOnMessageReceived(Message message)
         {
-            _logger.LogInformation($"Receive message type: {message.Type}");
+            _logger.LogInformation($"Старт работы с ботом");
             if (message.Type != MessageType.Text)
                 return;
 
@@ -152,15 +142,13 @@ namespace TG_Bot.BusinessLayer
             //};
             var action = SendInlineKeyboard(message);
             await action;
-
-
         }
 
         // Send inline keyboard
         // You can process responses in BotOnCallbackQueryReceived handler
         async Task SendInlineKeyboard(Message message)
         {
-            await _botClient.SendChatActionAsync(message.Chat.Id, ChatAction.Typing);
+            await _botClient.SendChatActionAsync(message.Chat.Id, ChatAction.Typing, Token);
             InlineKeyboardMarkup inlineKeyboard;
             switch (message.Text)
             {
@@ -177,8 +165,7 @@ namespace TG_Bot.BusinessLayer
             await _botClient.SendTextMessageAsync(
                 chatId: message.Chat.Id,
                 text: "Выберите запрос",
-                replyMarkup: inlineKeyboard
-            );
+                replyMarkup: inlineKeyboard, cancellationToken: Token);
         }
 
         //async Task SendInlineKeyboard(long ChatId)
@@ -191,56 +178,52 @@ namespace TG_Bot.BusinessLayer
         //    );
         //}
 
-        async Task SendFile(Message message)
-        {
-            await _botClient.SendChatActionAsync(message.Chat.Id, ChatAction.UploadPhoto);
+        //async Task SendFile(Message message)
+        //{
+        //    await _botClient.SendChatActionAsync(message.Chat.Id, ChatAction.UploadPhoto, Token);
 
-            const string filePath = @"Files/tux.png";
-            using FileStream fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-            var fileName = filePath.Split(Path.DirectorySeparatorChar).Last();
+        //    const string filePath = @"Files/tux.png";
+        //    using FileStream fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        //    var fileName = filePath.Split(Path.DirectorySeparatorChar).Last();
 
-            await _botClient.SendPhotoAsync(
-                chatId: message.Chat.Id,
-                photo: new InputOnlineFile(fileStream, fileName),
-                caption: "Nice Picture"
-            );
-        }
+        //    await _botClient.SendPhotoAsync(
+        //        chatId: message.Chat.Id,
+        //        photo: new InputOnlineFile(fileStream, fileName),
+        //        caption: "Nice Picture", cancellationToken: Token);
+        //}
 
-        async Task RequestContactAndLocation(Message message)
-        {
-            var RequestReplyKeyboard = new ReplyKeyboardMarkup(new[]
-            {
-                    KeyboardButton.WithRequestLocation("Location"),
-                    KeyboardButton.WithRequestContact("Contact"),
-                });
-            await _botClient.SendTextMessageAsync(
-                chatId: message.Chat.Id,
-                text: "Who or Where are you?",
-                replyMarkup: RequestReplyKeyboard
-            );
-        }
+        //async Task RequestContactAndLocation(Message message)
+        //{
+        //    var RequestReplyKeyboard = new ReplyKeyboardMarkup(new[]
+        //    {
+        //            KeyboardButton.WithRequestLocation("Location"),
+        //            KeyboardButton.WithRequestContact("Contact"),
+        //        });
+        //    await _botClient.SendTextMessageAsync(
+        //        chatId: message.Chat.Id,
+        //        text: "Who or Where are you?",
+        //        replyMarkup: RequestReplyKeyboard, cancellationToken: Token);
+        //}
 
-        async Task Usage(Message message)
-        {
-            //const string usage = "Usage:\n" +
-            //                        "/inline   - send inline keyboard\n" +
-            //                        "/keyboard - send custom keyboard\n" +
-            //                        "/photo    - send a photo\n" +
-            //                        "/request  - request location or contact";
-            const string usage = "Использование: \n" +
-                                 "/state          - текущее состояние системы\n" +
-                                 "/temperature    - температура объектов";
-            await _botClient.SendTextMessageAsync(
-                chatId: message.Chat.Id,
-                text: usage,
-                replyMarkup: new ReplyKeyboardRemove()
-            );
-        }
+        //async Task Usage(Message message)
+        //{
+        //    //const string usage = "Usage:\n" +
+        //    //                        "/inline   - send inline keyboard\n" +
+        //    //                        "/keyboard - send custom keyboard\n" +
+        //    //                        "/photo    - send a photo\n" +
+        //    //                        "/request  - request location or contact";
+        //    const string usage = "Использование: \n" +
+        //                         "/state          - текущее состояние системы\n" +
+        //                         "/temperature    - температура объектов";
+        //    await _botClient.SendTextMessageAsync(
+        //        chatId: message.Chat.Id,
+        //        text: usage,
+        //        replyMarkup: new ReplyKeyboardRemove(), cancellationToken: Token);
+        //}
 
         // Process Inline Keyboard callback data
         private async Task BotOnCallbackQueryReceived(CallbackQuery callbackQuery)
         {
-            string userName = callbackQuery.Message.Chat.Username;
             switch (callbackQuery.Data)
             {
                 case "state":
@@ -277,110 +260,30 @@ namespace TG_Bot.BusinessLayer
 
                 case "cameras":
                     await _botClient.AnswerCallbackQueryAsync(
-                        callbackQuery.Id
-                    );
+                        callbackQuery.Id, cancellationToken: Token);
 
                     //удаление главной клавиатуры
                     await _botClient.EditMessageReplyMarkupAsync(
                         chatId: callbackQuery.Message.Chat.Id,
                         messageId: callbackQuery.Message.MessageId,
-                        replyMarkup: _camerasKeyboard);
+                        replyMarkup: _camerasKeyboard, cancellationToken: Token);
                     break;
 
                 case "entrance":
-                    //ответ на кнопку
-                    await _botClient.AnswerCallbackQueryAsync(
-                        callbackQuery.Id
-                    );
-                    // Показываем статус отправки фото
-                    await _botClient.SendChatActionAsync(callbackQuery.Message.Chat.Id, ChatAction.UploadPhoto);
-                    string filePath = string.Empty;
-                    //отправка фото
-                    try
-                    {
-                        filePath = _camService.GetEntranceCam(out var fileName);
-                        await using FileStream fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-                        await _botClient.SendPhotoAsync(
-                            chatId: callbackQuery.Message.Chat.Id,
-                            photo: new InputOnlineFile(fileStream, fileName),
-                            replyMarkup: _camerasKeyboard
-                        );
-
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError($"Ошибка получения изображения с камеры въезда - {ex.Message}");
-                        await _botClient.SendTextMessageAsync(
-                            chatId: callbackQuery.Message.Chat.Id,
-                            text: "Невозможно получить изображение с камеры въезда",
-                            replyMarkup: _camerasKeyboard);
-                    }
-
-                    _logger.LogInformation(string.IsNullOrEmpty(callbackQuery.From.FirstName)
-                        ? $"Запрос изображения с камеры въезда"
-                        : $"Запрос изображения с камеры въезда от {callbackQuery.From.FirstName}");
-                    try
-                    {
-                        File.Delete(filePath);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning($"Не удалось удалить изображение с камеры из временной директории - {ex.Message}");
-                    }
+                    await ReplyEntranceCam(callbackQuery);
                     break;
 
                 case "yard":
-                    //ответ на кнопку
-                    await _botClient.AnswerCallbackQueryAsync(
-                        callbackQuery.Id
-                    );
-                    string filePathToDelete = string.Empty;
-                    // Показываем статус отправки фото
-                    await _botClient.SendChatActionAsync(callbackQuery.Message.Chat.Id, ChatAction.UploadPhoto);
-                    //отправка фото
-                    try
-                    {
-                        //TODO добавить ожидание изображения
-                        var (fileP, fileName) = await _camService.GetYardCam();
-                        filePathToDelete = fileP;
-                        await using FileStream fileStream = new FileStream(fileP, FileMode.Open, FileAccess.Read, FileShare.Read);
-                        await _botClient.SendPhotoAsync(
-                            chatId: callbackQuery.Message.Chat.Id,
-                            photo: new InputOnlineFile(fileStream, fileName),
-                            replyMarkup: _camerasKeyboard
-                        );
-
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex.Message);
-                        await _botClient.SendTextMessageAsync(
-                            chatId: callbackQuery.Message.Chat.Id,
-                            text: "Невозможно получить изображение с камеры двора",
-                            replyMarkup: _camerasKeyboard);
-                    }
-
-                    _logger.LogInformation(string.IsNullOrEmpty(callbackQuery.From.FirstName)
-                        ? $"Запрос изображения с камеры двора"
-                        : $"Запрос изображения с камеры двора от {callbackQuery.From.FirstName}");
-                    try
-                    {
-                        File.Delete(filePathToDelete);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning($"Не удалось удалить изображение с камеры из временной директории - {ex.Message}");
-                    }
+                    await ReplyYardCam(callbackQuery);
                     break;
 
                 case "back":
                     await _botClient.AnswerCallbackQueryAsync(
-                        callbackQuery.Id
-                    );
+                        callbackQuery.Id, cancellationToken: Token);
                     await _botClient.EditMessageReplyMarkupAsync(
                          chatId: callbackQuery.Message.Chat.Id,
                          messageId: callbackQuery.Message.MessageId,
-                         replyMarkup: _keyboard);
+                         replyMarkup: _keyboard, cancellationToken: Token);
                     break;
 
                 default:
@@ -389,6 +292,117 @@ namespace TG_Bot.BusinessLayer
             }
 
         }
+
+        /// <summary>
+        /// Ответ на запрос изображения с камеры входа
+        /// </summary>
+        /// <param name="callbackQuery"></param>
+        /// <returns></returns>
+        private async Task ReplyEntranceCam(CallbackQuery callbackQuery)
+        {
+            //ответ на кнопку
+            await _botClient.AnswerCallbackQueryAsync(
+                callbackQuery.Id, cancellationToken: Token);
+            // Показываем статус отправки фото
+            await _botClient.SendChatActionAsync(callbackQuery.Message.Chat.Id, ChatAction.UploadPhoto, Token);
+            string filePath = string.Empty;
+            //отправка фото
+            try
+            {
+                filePath = _camService.GetEntranceCam(out var fileName);
+                await using FileStream fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                await _botClient.SendPhotoAsync(
+                    chatId: callbackQuery.Message.Chat.Id,
+                    photo: new InputOnlineFile(fileStream, fileName),
+                    replyMarkup: _camerasKeyboard, cancellationToken: Token);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Ошибка получения изображения с камеры въезда - {ex.Message}");
+                await _botClient.SendTextMessageAsync(
+                    chatId: callbackQuery.Message.Chat.Id,
+                    text: "Невозможно получить изображение с камеры въезда",
+                    replyMarkup: _camerasKeyboard, cancellationToken: Token);
+            }
+
+            _logger.LogInformation(string.IsNullOrEmpty(callbackQuery.From.FirstName)
+                ? $"Запрос изображения с камеры въезда"
+                : $"Запрос изображения с камеры въезда от {callbackQuery.From.FirstName}");
+            try
+            {
+                File.Delete(filePath);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning($"Не удалось удалить изображение с камеры из временной директории - {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Ответ на запрос изображения с камеры двора
+        /// </summary>
+        /// <param name="callbackQuery"></param>
+        /// <returns></returns>
+        private async Task ReplyYardCam(CallbackQuery callbackQuery)
+        {
+            //ответ на кнопку
+            await _botClient.AnswerCallbackQueryAsync(
+                callbackQuery.Id, cancellationToken: Token);
+            string filePathToDelete = string.Empty;
+            // Показываем статус отправки фото
+            await _botClient.SendChatActionAsync(callbackQuery.Message.Chat.Id, ChatAction.UploadPhoto, Token);
+            //отправка фото
+            try
+            {
+                var task = _camService.GetYardCam(Token);
+                while (!task.IsCompleted)
+                {
+                    if (_stoppingCts.Token.IsCancellationRequested)
+                    {
+                        Token.ThrowIfCancellationRequested();
+                    }
+
+                    await _botClient.SendChatActionAsync(callbackQuery.Message.Chat.Id, ChatAction.UploadPhoto,
+                        Token);
+                    await Task.Delay(100, Token);
+                }
+
+                var (fileP, fileName) = task.Result;
+                //var (fileP, fileName) = await _camService.GetYardCam();
+                filePathToDelete = fileP;
+                await using FileStream fileStream =
+                    new FileStream(fileP, FileMode.Open, FileAccess.Read, FileShare.Read);
+                await _botClient.SendPhotoAsync(
+                    chatId: callbackQuery.Message.Chat.Id,
+                    photo: new InputOnlineFile(fileStream, fileName),
+                    replyMarkup: _camerasKeyboard, cancellationToken: Token);
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogWarning($"Загрузка фотографии отменена");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex.Message);
+                await _botClient.SendTextMessageAsync(
+                    chatId: callbackQuery.Message.Chat.Id,
+                    text: "Невозможно получить изображение с камеры двора",
+                    replyMarkup: _camerasKeyboard, cancellationToken: Token);
+            }
+
+            _logger.LogInformation(string.IsNullOrEmpty(callbackQuery.From.FirstName)
+                ? $"Запрос изображения с камеры двора"
+                : $"Запрос изображения с камеры двора от {callbackQuery.From.FirstName}");
+            try
+            {
+                File.Delete(filePathToDelete);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning($"Не удалось удалить изображение с камеры из временной директории - {ex.Message}");
+            }
+        }
+
 
         /// <summary>
         /// Ответ
@@ -400,14 +414,13 @@ namespace TG_Bot.BusinessLayer
         {
             //ответ
             await _botClient.AnswerCallbackQueryAsync(
-                callbackQuery.Id
-            );
+                callbackQuery.Id, cancellationToken: Token);
 
             //удаление главной клавиатуры
             await _botClient.EditMessageReplyMarkupAsync(
                 chatId: callbackQuery.Message.Chat.Id,
                 messageId: callbackQuery.Message.MessageId,
-                replyMarkup: null);
+                replyMarkup: null, cancellationToken: Token);
 
             //отправка результата + кнопка "Назад"
             await _botClient.SendTextMessageAsync(
@@ -416,14 +429,14 @@ namespace TG_Bot.BusinessLayer
                 replyMarkup: new InlineKeyboardMarkup(new[]
                 {
                     InlineKeyboardButton.WithCallbackData("Назад", "back"),
-                }));
+                }), cancellationToken: Token);
         }
 
         #region Inline Mode
 
         private async Task BotOnInlineQueryReceived(InlineQuery inlineQuery)
         {
-            Console.WriteLine($"Received inline query from: {inlineQuery.From.Id}");
+            _logger.LogInformation($"Received inline query from: {inlineQuery.From.Id}");
 
             InlineQueryResultBase[] results = {
                 // displayed result
@@ -440,20 +453,19 @@ namespace TG_Bot.BusinessLayer
                 inlineQuery.Id,
                 results,
                 isPersonal: true,
-                cacheTime: 0
-            );
+                cacheTime: 0, cancellationToken: Token);
         }
 
-        private async Task BotOnChosenInlineResultReceived(ChosenInlineResult chosenInlineResult)
-        {
-            Console.WriteLine($"Received inline result: {chosenInlineResult.ResultId}");
-        }
+        //private async Task BotOnChosenInlineResultReceived(ChosenInlineResult chosenInlineResult)
+        //{
+        //    Console.WriteLine($"Received inline result: {chosenInlineResult.ResultId}");
+        //}
 
         #endregion
 
         private async Task UnknownUpdateHandlerAsync(Update update)
         {
-            Console.WriteLine($"Unknown update type: {update.Type}");
+            _logger.LogWarning($"Unknown update type: {update.Type}");
         }
 
         public async Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
@@ -464,18 +476,18 @@ namespace TG_Bot.BusinessLayer
                 _ => exception.ToString()
             };
 
-            Console.WriteLine(ErrorMessage);
+            _logger.LogError(ErrorMessage);
         }
 
         /// <inheritdoc />
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            _logger.LogDebug($"Bot service is starting.");
-            // TODO разобраться с отменой задач
-            CancellationTokenSource.CreateLinkedTokenSource(_stoppingCts.Token, cancellationToken);
-            //_stoppingCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            _stoppingCts.Token.Register(() =>
-                _logger.LogDebug($"Bot service stopping"));
+            _logger.LogDebug($"Bot service is starting");
+            CancellationTokenSource.CreateLinkedTokenSource(Token, cancellationToken);
+            Token.Register(() =>
+            {
+                _logger.LogInformation($"Bot service stopping");
+            },true);
 
             if (string.IsNullOrEmpty(BotToken))
             {
@@ -490,19 +502,20 @@ namespace TG_Bot.BusinessLayer
             _executingTask = new Task(() =>
             {
                 _botClient.StartReceiving(new DefaultUpdateHandler(HandleUpdateAsync, HandleErrorAsync),
-                        _stoppingCts.Token);
+                        Token);
                 _logger.LogInformation($"Telegram bot started receiveing");
-            }, _stoppingCts.Token);
+            }, Token);
 
             try
             {
                 _executingTask.Start();
-                _logger.LogInformation("Telegram bot started, waiting for messages");
+                _logger.LogDebug("Telegram bot initiated");
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                _logger.LogError($"Работа бота отменена, не найден токен");
+                _logger.LogError($"Работа бота отменена, не найден токен бота");
             }
+            //TODO
             //_stoppingCts.Token.ThrowIfCancellationRequested();
             await _executingTask;
         }
@@ -514,9 +527,17 @@ namespace TG_Bot.BusinessLayer
             {
                 return;
             }
-
-            //_botClient.StopReceiving();
             _stoppingCts.Cancel();
+
+            try
+            {
+                _logger.LogDebug($"Try to stop telegram bot receiving");
+                _botClient.StopReceiving();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug($"Error while stopping bot receiving - {ex.Message}");
+            }
 
             await Task.WhenAny(_executingTask, Task.Delay(-1, cancellationToken));
 
@@ -527,18 +548,10 @@ namespace TG_Bot.BusinessLayer
         /// <inheritdoc />
         public void Dispose()
         {
-            _logger.LogInformation("Dispose");
             _executingTask.Dispose();
-            try
-            {
-                _botClient.StopReceiving();
-            }
-            catch (Exception ex)
-            {
-            }
             Interlocked.Exchange(ref _botClient, null);
+            _logger.LogInformation("Dispose");
             _stoppingCts.Dispose();
-            //Dispose
         }
     }
 }
