@@ -94,7 +94,12 @@ namespace TG_Bot.monitoring
         /// </summary>
         [Column("D13")]
         public float? Energy { get; set; }
-
+        
+        /// <summary>
+        /// Включён нагрев бойлера
+        /// </summary>
+        [NotMapped]
+        public bool BoilerHeating { get; set; }
 
         public float? D14 { get; set; }
     }

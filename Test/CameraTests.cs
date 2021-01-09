@@ -1,17 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Reflection;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
-using RtspClientSharp;
-using RtspClientSharp.RawFrames.Audio;
-using RtspClientSharp.RawFrames.Video;
 using Xunit;
-using System.IO;
 using Xunit.Abstractions;
 
 namespace Test

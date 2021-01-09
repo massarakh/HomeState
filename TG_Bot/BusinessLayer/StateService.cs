@@ -25,7 +25,8 @@ namespace TG_Bot.BusinessLayer
                    $"Фаза 2:              {state.Electricity.Phase2} A\n" +
                    $"Фаза 3:              {state.Electricity.Phase3} A\n" +
                    $"Сумма фаз:      {state.Electricity.PhaseSumm} A\n" +
-                   $"Бойлер:             {state.Boiler.ToFormatted()}\n" +
+                   $"Бойлер, питание:    {state.Boiler.ToFormatted()}\n" +
+                   //$"Бойлер, нагрев:     {state.BoilerHeat.ToFormatted()}\n" +
                    $"Тёплые полы: {state.Heat.Floor.ToFormatted()}\n" +
                    $"Батареи:           {state.Heat.Batteries.ToFormatted()}\n" +
                    $"Гостиная (t°):   {state.Temperature.LivingRoom} °С\n" +
@@ -70,6 +71,11 @@ namespace TG_Bot.BusinessLayer
                    $"Тёплые полы: {state.Heat.Floor.ToFormatted()}\n" +
                    $"Батареи:           {state.Heat.Batteries.ToFormatted()}\n";
         }
+
+        //private bool BoilerHeat(Data data)
+        //{
+        //    if (data.Boiler && data.Electricity.Phase3)
+        //}
 
         //[NotMapped]
         //public string HeatFloor

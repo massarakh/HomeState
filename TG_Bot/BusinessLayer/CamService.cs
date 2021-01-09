@@ -17,6 +17,9 @@ namespace TG_Bot.BusinessLayer
         private readonly ILogger<CamService> _logger;
         private IConfiguration _configuration { get; }
 
+        /// <summary>
+        /// Адрес для получения изображения с камеры въезда
+        /// </summary>
         private string EntranceCam
         {
             get
@@ -30,6 +33,9 @@ namespace TG_Bot.BusinessLayer
             }
         }
 
+        /// <summary>
+        /// Адрес для подключения к камере двора
+        /// </summary>
         private string YardCam
         {
             get
@@ -43,19 +49,9 @@ namespace TG_Bot.BusinessLayer
             }
         }
 
-        public string LocationToSave
-        {
-            get
-            {
-                string codeBase = Assembly.GetExecutingAssembly().Location;
-                UriBuilder uri = new UriBuilder(codeBase);
-                string tmp = Uri.UnescapeDataString(uri.Path);
-                string dirName = "frames";
-                var PathDir = Path.GetDirectoryName(tmp);
-                return Path.Combine(PathDir, dirName);
-            }
-        }
-
+        /// <summary>
+        /// Имя для файла со снимком
+        /// </summary>
         private string CamFileName => DateTime.Now.ToString("H'_'mm'_'ss d MMM yyyy") + ".jpg";
 
         public CamService(IConfiguration configuration, ILogger<CamService> logger)
@@ -65,7 +61,6 @@ namespace TG_Bot.BusinessLayer
             if (!CheckFFmpegInstalled())
             {
                 _logger.LogCritical($"Не найден ffpeg в системе");
-                //throw new Exception($"Не найден ffpeg в системе");
             }
 
         }
@@ -93,13 +88,6 @@ namespace TG_Bot.BusinessLayer
             {
                 throw new Exception($"Изображение с камеры въезда не найдено");
             }
-
-            // Отдача потока и имени
-            //MemoryStream destination = new MemoryStream();
-            //using (FileStream fs = new FileStream(pathToSave, FileMode.Open, FileAccess.Read, FileShare.Read))
-            //{
-            //    fs.CopyTo(destination);
-            //}
 
             return pathToSave;
         }
