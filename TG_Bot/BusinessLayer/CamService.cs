@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -103,8 +104,9 @@ namespace TG_Bot.BusinessLayer
             return pathToSave;
         }
 
+        /// <param name="stoppingCtsToken"></param>
         /// <inheritdoc />
-        public async Task<Tuple<string, string>> GetYardCam()
+        public async Task<Tuple<string, string>> GetYardCam(CancellationToken stoppingCtsToken)
         {
             string fileNameToSave = "YardCam_" + CamFileName;
             string pathToSave = Path.Combine(Path.GetTempPath(), fileNameToSave);
@@ -114,8 +116,9 @@ namespace TG_Bot.BusinessLayer
             {
                 Task<int> task = Task.Run(() =>
                 {
+                    stoppingCtsToken.ThrowIfCancellationRequested();
                     ProcessStartInfo procStartInfo =
-                        new System.Diagnostics.ProcessStartInfo("cmd", cmd)
+                        new ProcessStartInfo("cmd", cmd)
                         {
                             RedirectStandardOutput = true,
                             UseShellExecute = false,
@@ -129,8 +132,8 @@ namespace TG_Bot.BusinessLayer
                     proc.Start();
                     proc.WaitForExit();
                     return proc.ExitCode;
-                });
-                await Task.WhenAny(task, Task.Delay(-1));
+                }, stoppingCtsToken);
+                await Task.WhenAny(task, Task.Delay(-1, stoppingCtsToken));
                 _logger.LogDebug($"Запрос изображения завершился с кодом {task}");
                 if (!File.Exists(pathToSave))
                 {

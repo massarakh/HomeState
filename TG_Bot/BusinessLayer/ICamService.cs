@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace TG_Bot.BusinessLayer
@@ -16,7 +17,8 @@ namespace TG_Bot.BusinessLayer
         /// <summary>
         /// Получение изображения с камеры двора
         /// </summary>
+        /// <param name="stoppingCtsToken"></param>
         /// <returns>Поток</returns>
-        Task<Tuple<string, string>> GetYardCam();
+        Task<Tuple<string, string>> GetYardCam(CancellationToken stoppingCtsToken);
     }
 }
