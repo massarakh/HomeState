@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
@@ -30,6 +31,8 @@ namespace TG_Bot.BusinessLayer
         private readonly CancellationTokenSource _stoppingCts =
             new CancellationTokenSource();
         private CancellationToken Token => _stoppingCts.Token;
+
+        private string _botToken = string.Empty;
 
         /// <summary>
         /// Основная клавиатура
@@ -78,15 +81,48 @@ namespace TG_Bot.BusinessLayer
         {
             get
             {
+                if (!string.IsNullOrEmpty(_botToken))
+                {
+                    return _botToken;
+                }
                 IEnumerable<IConfigurationSection> sections = _configuration.GetSection("BotConfiguration").GetChildren();
-                var token = sections.FirstOrDefault(_ => _.Key == "BotToken");
-                if (token == null)
+                var tokenSection = sections.FirstOrDefault(_ => _.Key == "BotToken");
+                if (tokenSection == null)
                 {
                     _logger.LogError($"Не найден токен для бота, выход");
                     return string.Empty;
                 }
-                return token.Value;
+
+                switch (tokenSection.Value)
+                {
+                    case "<BotToken>":
+                    {
+                        string token = GetBotTokenFromFile();
+                        _botToken = token;
+                        return string.IsNullOrEmpty(token) ? string.Empty : token;
+                    }
+
+                    default:
+                        return string.Empty;
+                }
             }
+        }
+
+        /// <summary>
+        /// Получение токена из файла
+        /// </summary>
+        /// <returns></returns>
+        private string GetBotTokenFromFile()
+        {
+            //string codeBase = Assembly.GetExecutingAssembly().Location;
+            var path = Directory.GetParent(AppContext.BaseDirectory).FullName;
+            //UriBuilder uri = new UriBuilder(codeBase);
+            //string tmp = Uri.UnescapeDataString(uri.Path);
+            var PathToken = Path.Combine(path, "BotToken.txt");
+            if (!File.Exists(PathToken))
+                return null;
+
+            return File.ReadAllText(PathToken);
         }
 
         public BotService(ILogger<BotService> logger, IStateService stateService, ICamService camService, IConfiguration configuration)
@@ -487,7 +523,7 @@ namespace TG_Bot.BusinessLayer
             Token.Register(() =>
             {
                 _logger.LogInformation($"Bot service stopping");
-            },true);
+            }, true);
 
             if (string.IsNullOrEmpty(BotToken))
             {
