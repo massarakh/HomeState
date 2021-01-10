@@ -41,6 +41,18 @@ namespace Test
             Assert.True(model != null);
         }
 
-        //TODO написать тест с париснгом GetStateAndEvents и переопределить тип события через изменения сериализатора JSON
+        [Fact]
+        public void GetStateAndEvents()
+        {
+            var client = new RestClient("http://192.168.0.118:4040/data.cgx");
+            client.Authenticator = new HttpBasicAuthenticator("Nick", "gala2013");
+            var request = new RestRequest(@"?cmd={""Command"":""GetStateAndEvents""}", DataFormat.Json);
+            var response = client.Get(request);
+            var model = JsonConvert.DeserializeObject<CcuState>(response.Content);
+
+            Assert.True(model != null);
+        }
+        //TODO написать тест с Команда SetOutputState
+
     }
 }
