@@ -52,6 +52,21 @@ namespace Test
 
             Assert.True(model != null);
         }
+
+        [Fact]
+        public void SetOutputState()
+        {
+            var client = new RestClient("http://192.168.0.118:4040/data.cgx");
+            client.Authenticator = new HttpBasicAuthenticator("Nick", "gala2013");
+            Outputs o = new Outputs();
+            int state = 0;
+            var request = new RestRequest("?cmd={\"Command\":\"SetOutputState\",\"Number\":" + o.Output3.Number + ", \"State:\"" + state + "}", DataFormat.Json);
+            var response = client.Post(request);
+            var model = JsonConvert.DeserializeObject<CcuState>(response.Content);
+
+
+            Assert.True(model != null);
+        }
         //TODO написать тест с Команда SetOutputState
 
     }
