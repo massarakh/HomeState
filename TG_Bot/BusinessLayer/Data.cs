@@ -12,6 +12,7 @@ namespace TG_Bot.BusinessLayer
        public Electricity Electricity;
        public Heat Heat;
        public bool Boiler;
+       public bool BoilerHeat;
        public string Energy;
    }
 }

@@ -29,6 +29,7 @@ namespace TG_Bot.DAL
             return new Data
             {
                 Boiler = Convert.ToInt32(state.Boiler) == 10,
+                BoilerHeat = state.BoilerHeating,
                 Electricity = new Electricity
                 {
                     Phase1 = state.Phase1,
