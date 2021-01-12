@@ -35,7 +35,7 @@
         /// <summary>
         /// Свободный выход
         /// </summary>
-        public Output Output5 = new Output() { Index = 5, Name = "Output5" };
+        public Output Output5 = new Output() { Index = 6, Name = "Output5" };
 
     }
 
@@ -45,8 +45,9 @@
 
         public int Index { get; set; }
 
-        public int Number => Index++;
+        public int Number => this.Index + 1;
 
+        public int State { get; set; }
 
     }
 }

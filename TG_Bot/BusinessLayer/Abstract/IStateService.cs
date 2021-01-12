@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
-using TG_Bot.monitoring;
+﻿using System.Threading.Tasks;
 
-namespace TG_Bot.BusinessLayer
+namespace TG_Bot.BusinessLayer.Abstract
 {
     public interface IStateService
     {
