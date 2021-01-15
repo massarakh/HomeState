@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
@@ -16,9 +15,10 @@ using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.InlineQueryResults;
 using Telegram.Bot.Types.InputFiles;
 using Telegram.Bot.Types.ReplyMarkups;
+using TG_Bot.BusinessLayer.Abstract;
 using File = System.IO.File;
 
-namespace TG_Bot.BusinessLayer
+namespace TG_Bot.BusinessLayer.Concrete
 {
     public class BotService : IBotService, IHostedService, IDisposable
     {

@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using RestSharp;
 using RestSharp.Authenticators;
+using TG_Bot.BusinessLayer;
 using TG_Bot.BusinessLayer.CCUModels;
 using Xunit;
 
@@ -52,7 +53,26 @@ namespace Test
 
             Assert.True(model != null);
         }
+
+        [Fact]
+        public void SetOutputState()
+        {
+            var client = new RestClient("http://192.168.0.118:4040/data.cgx");
+            client.Authenticator = new HttpBasicAuthenticator("Nick", "gala2013");
+            Outputs o = new Outputs();
+            int state = 1;
+            var cmd = new CommandRequest { Command = "SetOutputState", Number = o.Output3.Number, State = state };
+
+            var request = new RestRequest().AddParameter("cmd", JsonConvert.SerializeObject(cmd));
+            var response = client.Get(request);
+            var model = JsonConvert.DeserializeObject<CcuState>(response.Content);
+
+
+            Assert.True(model != null);
+        }
         //TODO написать тест с Команда SetOutputState
+
+        
 
     }
 }

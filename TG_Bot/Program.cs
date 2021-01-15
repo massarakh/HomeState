@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,6 +7,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using StructureMap;
 using TG_Bot.BusinessLayer;
+using TG_Bot.BusinessLayer.Abstract;
+using TG_Bot.BusinessLayer.Concrete;
 using TG_Bot.DAL;
 using TG_Bot.monitoring;
 
