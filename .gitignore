@@ -350,3 +350,4 @@ MigrationBackup/
 .ionide/
 
 BotToken.txt
+/TG_Bot/BotToken_original.txt
