@@ -47,9 +47,7 @@ namespace TG_Bot.BusinessLayer.CCUModels
         public int Index { get; set; }
 
         public int Number => this.Index + 1;
-
-        public int State { get; set; }
-
+        
         public string Meaning { get; set; }
     }
 }

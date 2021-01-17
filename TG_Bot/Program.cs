@@ -44,6 +44,7 @@ namespace TG_Bot
                     services.AddScoped<ICamService, CamService>();
                     services.AddScoped<IStateService, StateService>();
                     services.AddScoped<IBotService, BotService>();
+                    services.AddScoped<IRestService, RestService>();
                     services.AddSingleton(configuration);
                     services.AddHostedService<BotService>();
                     var connectionString = context.Configuration.GetConnectionString("DefaultConnection");

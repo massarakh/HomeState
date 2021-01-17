@@ -14,9 +14,20 @@ namespace TG_Bot.BusinessLayer.Concrete
 {
     public class RestService : IRestService
     {
-
         private readonly ILogger<RestService> _logger;
         private IConfiguration _configuration { get; }
+
+        /// <summary>
+        /// Команда переключения состояния
+        /// </summary>
+        /// <remarks>Временная мера размещения в RestService</remarks>
+        public const string SwitchCommand = "SetOutputState";
+
+        /// <summary>
+        /// Команда получения состояния контроллера
+        /// </summary>
+        /// <remarks>Временная мера размещения в RestService</remarks>
+        public const string GetStateCommand = "GetStateAndEvents";
 
         /// <summary>
         /// Адрес контролллера
@@ -69,7 +80,7 @@ namespace TG_Bot.BusinessLayer.Concrete
             _configuration = configuration;
         }
         /// <inheritdoc />
-        public string SwitchOutput(Output output)
+        public string SwitchOutput(CommandRequest request)
         {
             CcuState model;
             try
@@ -78,18 +89,18 @@ namespace TG_Bot.BusinessLayer.Concrete
                 {
                     Authenticator = new HttpBasicAuthenticator(Login, Password)
                 };
-                var cmd = new CommandRequest { Command = "SetOutputState", Number = output.Number, State = output.State };
+                var cmd = new CommandRequest { Command = request.Command, Output = request.Output, State = request.State };
 
-                var request = new RestRequest().AddParameter("cmd", JsonConvert.SerializeObject(cmd));
-                var response = client.Get(request);
+                var req = new RestRequest().AddParameter("cmd", JsonConvert.SerializeObject(cmd));
+                var response = client.Get(req);
                 model = JsonConvert.DeserializeObject<CcuState>(response.Content);
             }
             catch (Exception ex)
             {
-                throw new Exception($"Ошибка изменения состояния выхода \"{output.Name}\" - {ex.Message}");
+                throw new Exception($"Невозможно изменить состояние выхода \"{request.Output.Name}\" - {ex.Message}");
             }
 
-            return $"{output.Name} - {model.Outputs[output.Index].ToFormatted()}";
+            return $"{request.Output.Name} - {model.Outputs[request.Output.Index].ToFormatted()}";
         }
 
         /// <inheritdoc />
@@ -102,7 +113,7 @@ namespace TG_Bot.BusinessLayer.Concrete
                 {
                     Authenticator = new HttpBasicAuthenticator(Login, Password)
                 };
-                var cmd = new CommandRequest { Command = "GetStateAndEvents" };
+                var cmd = new CommandRequest { Command = GetStateCommand };
 
                 var request = new RestRequest().AddParameter("cmd", JsonConvert.SerializeObject(cmd, new JsonSerializerSettings()
                 {
@@ -113,7 +124,7 @@ namespace TG_Bot.BusinessLayer.Concrete
             }
             catch (Exception ex)
             {
-                throw new Exception($"Ошибка получения состояния контроллера - {ex.Message}");
+                throw new Exception($"Невозможно получить состояние контроллера - {ex.Message}");
             }
 
             return $"Нагрев конвекторов - {model.Outputs[0].ToFormatted()}\n" +
