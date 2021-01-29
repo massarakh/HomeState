@@ -43,7 +43,8 @@ namespace TG_Bot.monitoring
             base.OnConfiguring(optionsBuilder);
             if (!optionsBuilder.IsConfigured)
             {
-                optionsBuilder.UseMySql(Configuration.GetConnectionString("DefaultConnection"));
+                optionsBuilder.UseMySql(_configuration.GetConnectionString("DefaultConnection"));
+                //optionsBuilder.UseMySql(Configuration.GetConnectionString("DefaultConnection"));
             }
         }
 

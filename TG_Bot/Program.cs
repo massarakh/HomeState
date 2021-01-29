@@ -24,15 +24,32 @@ namespace TG_Bot
 
         private static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
+                .ConfigureAppConfiguration((hostingContext, config) =>
+                {
+                    config.Sources.Clear();
+
+                    var env = hostingContext.HostingEnvironment;
+
+                    config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                        .AddJsonFile($"appsettings.{env.EnvironmentName}.json",
+                            optional: true, reloadOnChange: true);
+
+                    config.AddEnvironmentVariables();
+
+                    if (args != null)
+                    {
+                        config.AddCommandLine(args);
+                    }
+                })
                 .ConfigureServices((context, services) =>
                 {
-                    string envAppSettings = $"appsettings.json".ToLower();
+                    //string envAppSettings = $"appsettings.json".ToLower();
                     //string envAppSettings = $"appsettings.{context.HostingEnvironment.EnvironmentName}.json".ToLower();
-                    IConfigurationRoot configuration = new ConfigurationBuilder()
-                    .SetBasePath(Directory.GetParent(AppContext.BaseDirectory).FullName)
-                     .AddJsonFile(envAppSettings, optional: true, reloadOnChange: true)
-                     //.AddEnvironmentVariables()
-                    .Build();
+                    //IConfigurationRoot configuration = new ConfigurationBuilder()
+                    //.SetBasePath(Directory.GetParent(AppContext.BaseDirectory).FullName)
+                    // .AddJsonFile(envAppSettings, optional: true, reloadOnChange: true)
+                    // .AddEnvironmentVariables()
+                    //.Build();
 
                     services.AddSingleton(LoggerFactory.Create(builder =>
                     {
@@ -40,10 +57,10 @@ namespace TG_Bot
                     }));
                     services.AddLogging();
                     services.AddScoped<IStateRepository, StateRepository>();
+                    services.AddSingleton<IConfiguration>(context.Configuration);
                     services.AddScoped<ICamService, CamService>();
                     services.AddScoped<IStateService, StateService>();
                     services.AddScoped<IBotService, BotService>();
-                    services.AddSingleton(configuration);
                     services.AddHostedService<BotService>();
                     var connectionString = context.Configuration.GetConnectionString("DefaultConnection");
                     services.AddDbContext<_4stasContext>(options =>
