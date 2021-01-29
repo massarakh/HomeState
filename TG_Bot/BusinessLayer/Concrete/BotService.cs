@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
@@ -16,9 +15,11 @@ using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.InlineQueryResults;
 using Telegram.Bot.Types.InputFiles;
 using Telegram.Bot.Types.ReplyMarkups;
+using TG_Bot.BusinessLayer.Abstract;
+using TG_Bot.BusinessLayer.CCUModels;
 using File = System.IO.File;
 
-namespace TG_Bot.BusinessLayer
+namespace TG_Bot.BusinessLayer.Concrete
 {
     public class BotService : IBotService, IHostedService, IDisposable
     {
@@ -26,11 +27,13 @@ namespace TG_Bot.BusinessLayer
         private readonly IStateService _stateService;
         private readonly ICamService _camService;
         private readonly IConfiguration _configuration;
+        private readonly IRestService _restService;
         private ITelegramBotClient _botClient;
         private Task _executingTask;
         private readonly CancellationTokenSource _stoppingCts =
             new CancellationTokenSource();
         private CancellationToken Token => _stoppingCts.Token;
+        private Outputs _outputs = new Outputs();
 
         private string _botToken = string.Empty;
 
@@ -53,6 +56,7 @@ namespace TG_Bot.BusinessLayer
                 },
                 new []
                 {
+                    InlineKeyboardButton.WithCallbackData("Управление", "control"),
                     InlineKeyboardButton.WithCallbackData("Камеры","cameras"),
                 }
             });
@@ -73,6 +77,47 @@ namespace TG_Bot.BusinessLayer
                 InlineKeyboardButton.WithCallbackData("Назад", "back")
             }
         });
+
+        /// <summary>
+        /// Клавиатура с управлением
+        /// </summary>
+        private InlineKeyboardMarkup _controlKeyboard =>
+            new InlineKeyboardMarkup(new[]
+            {
+                new []
+                {
+                    InlineKeyboardButton.WithCallbackData("Состояния выходов", "output_states")
+                },
+                new[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Конвекторы вкл.", "relay1_enable"),
+                    InlineKeyboardButton.WithCallbackData("Конвекторы выкл.", "relay1_disable"),
+                },
+                new []
+                {
+                    InlineKeyboardButton.WithCallbackData("Бойлер вкл.", "output1_enable"),
+                    InlineKeyboardButton.WithCallbackData("Бойлер выкл.", "output1_disable")
+                },
+                new []
+                {
+                    InlineKeyboardButton.WithCallbackData("Тёплые полы (с/у) вкл.", "output2_enable"),
+                    InlineKeyboardButton.WithCallbackData("Тёплые полы (с/у) выкл.", "output2_disable")
+                },
+                new []
+                {
+                    InlineKeyboardButton.WithCallbackData("Спальня молод. вкл.", "output3_enable"),
+                    InlineKeyboardButton.WithCallbackData("Спальня молод. выкл.", "output3_disable")
+                },
+                new []
+                {
+                    InlineKeyboardButton.WithCallbackData("Кухня вкл.", "output4_enable"),
+                    InlineKeyboardButton.WithCallbackData("Кухня выкл.", "output4_disable")
+                },
+                new []
+                {
+                    InlineKeyboardButton.WithCallbackData("Назад", "back")
+                }
+            });
 
         /// <summary>
         /// Получение токена телеграм бота
@@ -96,11 +141,11 @@ namespace TG_Bot.BusinessLayer
                 switch (tokenSection.Value)
                 {
                     case "<BotToken>":
-                    {
-                        string token = GetBotTokenFromFile();
-                        _botToken = token;
-                        return string.IsNullOrEmpty(token) ? string.Empty : token;
-                    }
+                        {
+                            string token = GetBotTokenFromFile();
+                            _botToken = token;
+                            return string.IsNullOrEmpty(token) ? string.Empty : token;
+                        }
 
                     default:
                         return string.Empty;
@@ -114,10 +159,7 @@ namespace TG_Bot.BusinessLayer
         /// <returns></returns>
         private string GetBotTokenFromFile()
         {
-            //string codeBase = Assembly.GetExecutingAssembly().Location;
             var path = Directory.GetParent(AppContext.BaseDirectory).FullName;
-            //UriBuilder uri = new UriBuilder(codeBase);
-            //string tmp = Uri.UnescapeDataString(uri.Path);
             var PathToken = Path.Combine(path, "BotToken.txt");
             if (!File.Exists(PathToken))
                 return null;
@@ -125,12 +167,13 @@ namespace TG_Bot.BusinessLayer
             return File.ReadAllText(PathToken);
         }
 
-        public BotService(ILogger<BotService> logger, IStateService stateService, ICamService camService, IConfiguration configuration)
+        public BotService(ILogger<BotService> logger, IStateService stateService, ICamService camService, IConfiguration configuration, IRestService restService)
         {
             _logger = logger;
             _stateService = stateService;
             _camService = camService;
             _configuration = configuration;
+            _restService = restService;
         }
 
         public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
@@ -260,6 +303,7 @@ namespace TG_Bot.BusinessLayer
         // Process Inline Keyboard callback data
         private async Task BotOnCallbackQueryReceived(CallbackQuery callbackQuery)
         {
+            int stateValue;
             switch (callbackQuery.Data)
             {
                 case "state":
@@ -305,6 +349,52 @@ namespace TG_Bot.BusinessLayer
                         replyMarkup: _camerasKeyboard, cancellationToken: Token);
                     break;
 
+                case "control":
+                    await _botClient.AnswerCallbackQueryAsync(
+                        callbackQuery.Id, cancellationToken: Token);
+
+                    //удаление главной клавиатуры
+                    await _botClient.EditMessageReplyMarkupAsync(
+                        chatId: callbackQuery.Message.Chat.Id,
+                        messageId: callbackQuery.Message.MessageId,
+                        replyMarkup: _controlKeyboard, cancellationToken: Token);
+                    break;
+
+
+                case "relay1_enable":
+                case "relay1_disable":
+                    stateValue = callbackQuery.Data.Contains("enable") ? 1 : 0;
+                    await ReplySwitchOutput(callbackQuery, _outputs.Relay1, stateValue);
+                    break;
+
+                case "output1_enable":
+                case "output1_disable":
+                    stateValue = callbackQuery.Data.Contains("enable") ? 1 : 0;
+                    await ReplySwitchOutput(callbackQuery, _outputs.Output1, stateValue);
+                    break;
+
+                case "output2_enable":
+                case "output2_disable":
+                    stateValue = callbackQuery.Data.Contains("enable") ? 1 : 0;
+                    await ReplySwitchOutput(callbackQuery, _outputs.Output2, stateValue);
+                    break;
+
+                case "output3_enable":
+                case "output3_disable":
+                    stateValue = callbackQuery.Data.Contains("enable") ? 1 : 0;
+                    await ReplySwitchOutput(callbackQuery, _outputs.Output3, stateValue);
+                    break;
+
+                case "output4_enable":
+                case "output4_disable":
+                    stateValue = callbackQuery.Data.Contains("enable") ? 1 : 0;
+                    await ReplySwitchOutput(callbackQuery, _outputs.Output4, stateValue);
+                    break;
+
+                case "output_states":
+                    await ReplyControllerState(callbackQuery);
+                    break;
+
                 case "entrance":
                     await ReplyEntranceCam(callbackQuery);
                     break;
@@ -327,6 +417,83 @@ namespace TG_Bot.BusinessLayer
                     break;
             }
 
+        }
+
+        /// <summary>
+        /// Ответ переключения состояния выхода
+        /// </summary>
+        /// <param name="callbackQuery">Запрос</param>
+        /// <param name="output">Выход для переключения</param>
+        /// <param name="stateValue">Новое состояние</param>
+        /// <returns>Результат переключения</returns>
+        private async Task ReplySwitchOutput(CallbackQuery callbackQuery, Output output, int stateValue)
+        {
+            try
+            {
+                //ответ о принятии сообщения
+                await _botClient.AnswerCallbackQueryAsync(
+                    callbackQuery.Id, cancellationToken: Token);
+
+                //переключение выхода
+                var result = _restService.SwitchOutput(new CommandRequest
+                {
+                    Command = RestService.SwitchCommand,
+                    Output = output,
+                    State = stateValue
+                });
+
+                //ответ
+                await _botClient.SendTextMessageAsync(
+                    chatId: callbackQuery.Message.Chat.Id,
+                    text: result,
+                    replyMarkup: _controlKeyboard, cancellationToken: Token);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Ошибка - {ex.Message}");
+                await _botClient.SendTextMessageAsync(
+                    chatId: callbackQuery.Message.Chat.Id,
+                    text: "Ошибка переключения состояния выхода",
+                    replyMarkup: _controlKeyboard, cancellationToken: Token);
+            }
+            _logger.LogInformation(string.IsNullOrEmpty(callbackQuery.From.FirstName)
+                ? $"Переключение состояния выхода {output.Name}"
+                : $"Переключение состояния выхода {output.Name} от {callbackQuery.From.FirstName}");
+        }
+
+        /// <summary>
+        /// Ответ на запрос состояния контроллера
+        /// </summary>
+        /// <param name="callbackQuery">Запрос</param>
+        /// <returns>Результат запроса</returns>
+        private async Task ReplyControllerState(CallbackQuery callbackQuery)
+        {
+            try
+            {
+                //ответ о принятии сообщения
+                await _botClient.AnswerCallbackQueryAsync(
+                    callbackQuery.Id, cancellationToken: Token);
+
+                //переключение выхода
+                var result = _restService.GetState();
+
+                //ответ
+                await _botClient.SendTextMessageAsync(
+                    chatId: callbackQuery.Message.Chat.Id,
+                    text: result,
+                    replyMarkup: _controlKeyboard, cancellationToken: Token);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Ошибка - {ex.Message}");
+                await _botClient.SendTextMessageAsync(
+                    chatId: callbackQuery.Message.Chat.Id,
+                    text: "Ошибка получения состояния контроллера",
+                    replyMarkup: _controlKeyboard, cancellationToken: Token);
+            }
+            _logger.LogInformation(string.IsNullOrEmpty(callbackQuery.From.FirstName)
+                ? $"Получение состояния контроллера"
+                : $"Получение состояния контроллера от {callbackQuery.From.FirstName}");
         }
 
         /// <summary>

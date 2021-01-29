@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,6 +7,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using StructureMap;
 using TG_Bot.BusinessLayer;
+using TG_Bot.BusinessLayer.Abstract;
+using TG_Bot.BusinessLayer.Concrete;
 using TG_Bot.DAL;
 using TG_Bot.monitoring;
 
@@ -61,6 +62,8 @@ namespace TG_Bot
                     services.AddScoped<ICamService, CamService>();
                     services.AddScoped<IStateService, StateService>();
                     services.AddScoped<IBotService, BotService>();
+                    services.AddScoped<IRestService, RestService>();
+                    //services.AddSingleton(configuration);
                     services.AddHostedService<BotService>();
                     var connectionString = context.Configuration.GetConnectionString("DefaultConnection");
                     services.AddDbContext<_4stasContext>(options =>

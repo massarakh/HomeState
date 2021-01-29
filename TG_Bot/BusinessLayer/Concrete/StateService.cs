@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
+using TG_Bot.BusinessLayer.Abstract;
 using TG_Bot.DAL;
 using TG_Bot.Helpers;
-using TG_Bot.monitoring;
 
-namespace TG_Bot.BusinessLayer
+namespace TG_Bot.BusinessLayer.Concrete
 {
     public class StateService : IStateService
     {
