@@ -1,4 +1,6 @@
-﻿namespace TG_Bot.BusinessLayer
+﻿using TG_Bot.BusinessLayer.CCUModels;
+
+namespace TG_Bot.BusinessLayer
 {
     /// <summary>
     /// Команда изменения состояния выхода
@@ -11,9 +13,9 @@
         public string Command { get; set; }
 
         /// <summary>
-        /// Номер выхода
+        /// Выход
         /// </summary>
-        public int Number { get; set; }
+        public Output Output { get; set; }
 
         /// <summary>
         /// Состояние, 1 - вкл, 0 - выкл

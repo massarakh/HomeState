@@ -61,7 +61,7 @@ namespace Test
             client.Authenticator = new HttpBasicAuthenticator("Nick", "gala2013");
             Outputs o = new Outputs();
             int state = 1;
-            var cmd = new CommandRequest { Command = "SetOutputState", Number = o.Output3.Number, State = state };
+            var cmd = new CommandRequest { Command = "SetOutputState", Output = o.Output3, State = state };
 
             var request = new RestRequest().AddParameter("cmd", JsonConvert.SerializeObject(cmd));
             var response = client.Get(request);

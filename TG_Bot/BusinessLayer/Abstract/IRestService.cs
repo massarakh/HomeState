@@ -10,9 +10,9 @@ namespace TG_Bot.BusinessLayer.Abstract
         /// <summary>
         /// Переключение выхода
         /// </summary>
-        /// <param name="output"></param>
+        /// <param name="request"></param>
         /// <returns></returns>
-        string SwitchOutput(Output output);
+        string SwitchOutput(CommandRequest request);
 
         /// <summary>
         /// Получение состояния

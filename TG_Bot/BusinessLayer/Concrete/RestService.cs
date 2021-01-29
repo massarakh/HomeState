@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -7,14 +8,26 @@ using RestSharp;
 using RestSharp.Authenticators;
 using TG_Bot.BusinessLayer.Abstract;
 using TG_Bot.BusinessLayer.CCUModels;
+using TG_Bot.Helpers;
 
 namespace TG_Bot.BusinessLayer.Concrete
 {
     public class RestService : IRestService
     {
-
         private readonly ILogger<RestService> _logger;
         private IConfiguration _configuration { get; }
+
+        /// <summary>
+        /// Команда переключения состояния
+        /// </summary>
+        /// <remarks>Временная мера размещения в RestService</remarks>
+        public const string SwitchCommand = "SetOutputState";
+
+        /// <summary>
+        /// Команда получения состояния контроллера
+        /// </summary>
+        /// <remarks>Временная мера размещения в RestService</remarks>
+        public const string GetStateCommand = "GetStateAndEvents";
 
         /// <summary>
         /// Адрес контролллера
@@ -67,27 +80,62 @@ namespace TG_Bot.BusinessLayer.Concrete
             _configuration = configuration;
         }
         /// <inheritdoc />
-        public string SwitchOutput(Output output)
+        public string SwitchOutput(CommandRequest request)
         {
-            string result = string.Empty;
-            var client = new RestClient(Url)
+            CcuState model;
+            try
             {
-                Authenticator = new HttpBasicAuthenticator(Login, Password)
-            };
-            var cmd = new CommandRequest { Command = "SetOutputState", Number = output.Number, State = output.State };
+                var client = new RestClient(Url)
+                {
+                    Authenticator = new HttpBasicAuthenticator(Login, Password)
+                };
+                var cmd = new CommandRequest { Command = request.Command, Output = request.Output, State = request.State };
 
-            var request = new RestRequest().AddParameter("cmd", JsonConvert.SerializeObject(cmd));
-            var response = client.Get(request);
-            var model = JsonConvert.DeserializeObject<CcuState>(response.Content);
+                var req = new RestRequest().AddParameter("cmd", JsonConvert.SerializeObject(cmd));
+                var response = client.Get(req);
+                model = JsonConvert.DeserializeObject<CcuState>(response.Content);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Невозможно изменить состояние выхода \"{request.Output.Name}\" - {ex.Message}");
+            }
 
-            return result;
+            return $"{request.Output.Name} - {model.Outputs[request.Output.Index].ToFormatted()}";
         }
 
         /// <inheritdoc />
         public string GetState()
         {
-            throw new System.NotImplementedException();
-            
+            CcuState model;
+            try
+            {
+                var client = new RestClient(Url)
+                {
+                    Authenticator = new HttpBasicAuthenticator(Login, Password)
+                };
+                var cmd = new CommandRequest { Command = GetStateCommand };
+
+                var request = new RestRequest().AddParameter("cmd", JsonConvert.SerializeObject(cmd, new JsonSerializerSettings()
+                {
+                    NullValueHandling = NullValueHandling.Ignore
+                }));
+                var response = client.Get(request);
+                model = JsonConvert.DeserializeObject<CcuState>(response.Content);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Невозможно получить состояние контроллера - {ex.Message}");
+            }
+
+            return $"Нагрев конвекторов - {model.Outputs[0].ToFormatted()}\n" +
+                   $"Бойлер - {model.Outputs[2].ToFormatted()}\n" +
+                   $"Тёплые полы (с/у)  - {model.Outputs[3].ToFormatted()}\n" +
+                   $"Спальня молодёжи - {model.Outputs[4].ToFormatted()}\n" +
+                   $"Кухня - {model.Outputs[5].ToFormatted()}\n" +
+                   $"Напряжение - {model.Power} V\n" +
+                   $"Температура контроллера - {model.Temp} °С\n" +
+                   $"Баланс - {model.Balance} ₽" +
+                   $"Уровень заряда батареи - {model.Battery.Charge}%";
         }
     }
 }

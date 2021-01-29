@@ -13,6 +13,11 @@ namespace TG_Bot.Helpers
             return state ? "Вкл." : "Выкл.";
         }
 
+        public static string ToFormatted(this int state)
+        {
+            return state == 1 ? "Вкл." : "Выкл.";
+        }
+
         //public static int[] ToArray(this Outputs outputs)
         //{
         //    return new[]
