@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Web;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using NLog;
 using RestSharp;
 using RestSharp.Authenticators;
 using TG_Bot.BusinessLayer.Abstract;
@@ -15,7 +14,7 @@ namespace TG_Bot.BusinessLayer.Concrete
 {
     public class RestService : IRestService
     {
-        private readonly ILogger<RestService> _logger;
+        private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
         private IConfiguration _configuration { get; }
 
         /// <summary>
@@ -40,7 +39,7 @@ namespace TG_Bot.BusinessLayer.Concrete
                 IEnumerable<IConfigurationSection> sections = _configuration.GetSection("ControllerUrl").GetChildren();
                 var url = sections.FirstOrDefault(_ => _.Key == "Url");
                 if (url != null) return url.Value;
-                _logger.LogError($"Не найден адрес контроллера, выход");
+                _logger.Error($"Не найден адрес контроллера, выход");
                 return string.Empty;
             }
         }
@@ -55,7 +54,7 @@ namespace TG_Bot.BusinessLayer.Concrete
                 IEnumerable<IConfigurationSection> sections = _configuration.GetSection("ControllerUrl").GetChildren();
                 var login = sections.FirstOrDefault(_ => _.Key == "Login");
                 if (login != null) return login.Value;
-                _logger.LogError($"Не найден логин для авторизации на контроллере, выход");
+                _logger.Error($"Не найден логин для авторизации на контроллере, выход");
                 return string.Empty;
             }
         }
@@ -70,14 +69,13 @@ namespace TG_Bot.BusinessLayer.Concrete
                 IEnumerable<IConfigurationSection> sections = _configuration.GetSection("ControllerUrl").GetChildren();
                 var pwd = sections.FirstOrDefault(_ => _.Key == "Password");
                 if (pwd != null) return pwd.Value;
-                _logger.LogError($"Не найден пароль для авторизации на контроллере, выход");
+                _logger.Error($"Не найден пароль для авторизации на контроллере, выход");
                 return string.Empty;
             }
         }
 
-        public RestService(IConfiguration configuration, ILogger<RestService> logger)
+        public RestService(IConfiguration configuration)
         {
-            _logger = logger;
             _configuration = configuration;
         }
         /// <inheritdoc />

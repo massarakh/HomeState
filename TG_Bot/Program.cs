@@ -3,6 +3,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using NLog.Extensions.Logging;
+using NLog.Web;
 using StructureMap;
 using TG_Bot.BusinessLayer.Abstract;
 using TG_Bot.BusinessLayer.Concrete;
@@ -29,8 +31,8 @@ namespace TG_Bot
                     //var env = hostingContext.HostingEnvironment;
 
                     config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
-                        //.AddJsonFile($"appsettings.{env.EnvironmentName}.json",
-                        //    optional: true, reloadOnChange: true);
+                    //.AddJsonFile($"appsettings.{env.EnvironmentName}.json",
+                    //    optional: true, reloadOnChange: true);
 
                     config.AddEnvironmentVariables();
 
@@ -49,11 +51,12 @@ namespace TG_Bot
                     // .AddEnvironmentVariables()
                     //.Build();
 
-                    services.AddSingleton(LoggerFactory.Create(builder =>
-                    {
-                        builder.AddConsole(_ => _.FormatterName = "Monitoring");
-                    }));
-                    services.AddLogging();
+                    //services.AddSingleton(LoggerFactory.Create(builder =>
+                    //{
+                    //    builder.AddConsole(_ => _.FormatterName = "Monitoring");
+                    //}));
+                    //services.AddLogging();
+
                     services.AddScoped<IStateRepository, StateRepository>();
                     services.AddSingleton<IConfiguration>(context.Configuration);
                     services.AddScoped<ICamService, CamService>();
@@ -83,6 +86,13 @@ namespace TG_Bot
                     // https://wildermuth.com/2020/08/02/NET-Core-Console-Apps---A-Better-Way
                     // https://andrewlock.net/using-dependency-injection-in-a-net-core-console-application/
 
-                });
+                })
+                .ConfigureLogging(logBuilder =>
+                {
+                    logBuilder.ClearProviders();
+                    logBuilder.SetMinimumLevel(LogLevel.Trace);
+                    ConfigureExtensions.AddNLog(logBuilder, "nLog.config");
+                }).UseNLog()
+                .UseConsoleLifetime();
     }
 }

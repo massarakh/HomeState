@@ -7,14 +7,15 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
+using NLog;
 using TG_Bot.BusinessLayer.Abstract;
 
 namespace TG_Bot.BusinessLayer.Concrete
 {
     public class CamService : ICamService
     {
-        private readonly ILogger<CamService> _logger;
+
+        private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
         private IConfiguration _configuration { get; }
 
         /// <summary>
@@ -27,7 +28,7 @@ namespace TG_Bot.BusinessLayer.Concrete
                 IEnumerable<IConfigurationSection> sections = _configuration.GetSection("EntranceCam").GetChildren();
                 var cam = sections.FirstOrDefault(_ => _.Key == "snapshot");
                 if (cam != null) return cam.Value;
-                _logger.LogError($"Не найден адрес для камеры въезда, выход");
+                _logger.Error($"Не найден адрес для камеры въезда, выход");
                 return string.Empty;
 
             }
@@ -43,7 +44,7 @@ namespace TG_Bot.BusinessLayer.Concrete
                 IEnumerable<IConfigurationSection> sections = _configuration.GetSection("YardCam").GetChildren();
                 var cam = sections.FirstOrDefault(_ => _.Key == "rtsp");
                 if (cam != null) return cam.Value;
-                _logger.LogError($"Не найден адрес для камеры двора, выход");
+                _logger.Error($"Не найден адрес для камеры двора, выход");
                 return string.Empty;
 
             }
@@ -54,13 +55,12 @@ namespace TG_Bot.BusinessLayer.Concrete
         /// </summary>
         private string CamFileName => DateTime.Now.ToString("H'_'mm'_'ss d MMM yyyy") + ".jpg";
 
-        public CamService(IConfiguration configuration, ILogger<CamService> logger)
+        public CamService(IConfiguration configuration)
         {
-            _logger = logger;
             _configuration = configuration;
             if (!CheckFFmpegInstalled())
             {
-                _logger.LogCritical($"Не найден ffpeg в системе");
+                _logger.Fatal($"Не найден ffpeg в системе");
             }
 
         }
@@ -99,7 +99,7 @@ namespace TG_Bot.BusinessLayer.Concrete
             string fileNameToSave = "YardCam_" + CamFileName;
             string pathToSave = Path.Combine(Path.GetTempPath(), fileNameToSave);
             string cmd = "/c " + YardCam + "\"" + pathToSave + "\"";
-            _logger.LogDebug($"Команда запроса - {cmd}");
+            _logger.Debug($"Команда запроса - {cmd}");
             try
             {
                 Task<int> task = Task.Run(() =>
@@ -122,7 +122,7 @@ namespace TG_Bot.BusinessLayer.Concrete
                     return proc.ExitCode;
                 }, stoppingCtsToken);
                 await Task.WhenAny(task, Task.Delay(-1, stoppingCtsToken));
-                _logger.LogDebug($"Запрос изображения завершился с кодом {task}");
+                _logger.Debug($"Запрос изображения завершился с кодом {task}");
                 if (!File.Exists(pathToSave))
                 {
                     throw new Exception($"Изображение не сохранено с помощью консольной программы ffmpeg");
@@ -157,7 +157,7 @@ namespace TG_Bot.BusinessLayer.Concrete
 
             if (result != null && result.Contains("ffmpeg version"))
             {
-                _logger.LogInformation(result);
+                _logger.Info(result);
                 return true;
             }
             //_logger.LogError($"Не найден ffmpeg в системе");

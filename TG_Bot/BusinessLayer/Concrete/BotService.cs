@@ -6,7 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Extensions.Polling;
@@ -18,12 +17,12 @@ using Telegram.Bot.Types.ReplyMarkups;
 using TG_Bot.BusinessLayer.Abstract;
 using TG_Bot.BusinessLayer.CCUModels;
 using File = System.IO.File;
+using NLog;
 
 namespace TG_Bot.BusinessLayer.Concrete
 {
     public class BotService : IBotService, IHostedService, IDisposable
     {
-        private readonly ILogger<BotService> _logger;
         private readonly IStateService _stateService;
         private readonly ICamService _camService;
         private readonly IConfiguration _configuration;
@@ -34,7 +33,7 @@ namespace TG_Bot.BusinessLayer.Concrete
             new CancellationTokenSource();
         private CancellationToken Token => _stoppingCts.Token;
         private Outputs _outputs = new Outputs();
-
+        private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
         private string _botToken = string.Empty;
 
         /// <summary>
@@ -134,7 +133,7 @@ namespace TG_Bot.BusinessLayer.Concrete
                 var tokenSection = sections.FirstOrDefault(_ => _.Key == "BotToken");
                 if (tokenSection == null)
                 {
-                    _logger.LogError($"Не найден токен для бота, выход");
+                    _logger.Error($"Не найден токен для бота, выход");
                     return string.Empty;
                 }
 
@@ -167,9 +166,9 @@ namespace TG_Bot.BusinessLayer.Concrete
             return File.ReadAllText(PathToken);
         }
 
-        public BotService(ILogger<BotService> logger, IStateService stateService, ICamService camService, IConfiguration configuration, IRestService restService)
+        public BotService(/*ILogger<BotService> logger, */IStateService stateService, ICamService camService, IConfiguration configuration, IRestService restService)
         {
-            _logger = logger;
+            //_logger = logger;
             _stateService = stateService;
             _camService = camService;
             _configuration = configuration;
@@ -206,7 +205,7 @@ namespace TG_Bot.BusinessLayer.Concrete
 
         private async Task BotOnMessageReceived(Message message)
         {
-            _logger.LogInformation($"Старт работы с ботом");
+            _logger.Info($"Старт работы с ботом");
             if (message.Type != MessageType.Text)
                 return;
 
@@ -309,7 +308,7 @@ namespace TG_Bot.BusinessLayer.Concrete
                 case "state":
                     var state = await _stateService.LastState();
                     await Answer(callbackQuery, state);
-                    _logger.LogInformation(string.IsNullOrEmpty(callbackQuery.From.FirstName)
+                    _logger.Info(string.IsNullOrEmpty(callbackQuery.From.FirstName)
                         ? $"Запрос состояния"
                         : $"Запрос состояния от {callbackQuery.From.FirstName}");
                     break;
@@ -317,7 +316,7 @@ namespace TG_Bot.BusinessLayer.Concrete
                 case "electricity":
                     var electricity = await _stateService.Electricity();
                     await Answer(callbackQuery, electricity);
-                    _logger.LogInformation(string.IsNullOrEmpty(callbackQuery.From.FirstName)
+                    _logger.Info(string.IsNullOrEmpty(callbackQuery.From.FirstName)
                         ? $"Запрос показаний по электричеству"
                         : $"Запрос показаний по электричеству от {callbackQuery.From.FirstName}");
                     break;
@@ -325,7 +324,7 @@ namespace TG_Bot.BusinessLayer.Concrete
                 case "heating":
                     var heating = await _stateService.Heating();
                     await Answer(callbackQuery, heating);
-                    _logger.LogInformation(string.IsNullOrEmpty(callbackQuery.From.FirstName)
+                    _logger.Info(string.IsNullOrEmpty(callbackQuery.From.FirstName)
                         ? $"Запрос состояния нагревательных элементов"
                         : $"Запрос состояния нагревательных элементов от {callbackQuery.From.FirstName}");
                     break;
@@ -333,7 +332,7 @@ namespace TG_Bot.BusinessLayer.Concrete
                 case "temperature":
                     var temperature = await _stateService.Temperature();
                     await Answer(callbackQuery, temperature);
-                    _logger.LogInformation(string.IsNullOrEmpty(callbackQuery.From.FirstName)
+                    _logger.Info(string.IsNullOrEmpty(callbackQuery.From.FirstName)
                         ? $"Запрос показаний температуры"
                         : $"Запрос показаний температуры от {callbackQuery.From.FirstName}");
                     break;
@@ -450,13 +449,13 @@ namespace TG_Bot.BusinessLayer.Concrete
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Ошибка - {ex.Message}");
+                _logger.Error($"Ошибка - {ex.Message}");
                 await _botClient.SendTextMessageAsync(
                     chatId: callbackQuery.Message.Chat.Id,
                     text: "Ошибка переключения состояния выхода",
                     replyMarkup: _controlKeyboard, cancellationToken: Token);
             }
-            _logger.LogInformation(string.IsNullOrEmpty(callbackQuery.From.FirstName)
+            _logger.Info(string.IsNullOrEmpty(callbackQuery.From.FirstName)
                 ? $"Переключение состояния выхода {output.Name}"
                 : $"Переключение состояния выхода {output.Name} от {callbackQuery.From.FirstName}");
         }
@@ -485,13 +484,13 @@ namespace TG_Bot.BusinessLayer.Concrete
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Ошибка - {ex.Message}");
+                _logger.Error($"Ошибка - {ex.Message}");
                 await _botClient.SendTextMessageAsync(
                     chatId: callbackQuery.Message.Chat.Id,
                     text: "Ошибка получения состояния контроллера",
                     replyMarkup: _controlKeyboard, cancellationToken: Token);
             }
-            _logger.LogInformation(string.IsNullOrEmpty(callbackQuery.From.FirstName)
+            _logger.Info(string.IsNullOrEmpty(callbackQuery.From.FirstName)
                 ? $"Получение состояния контроллера"
                 : $"Получение состояния контроллера от {callbackQuery.From.FirstName}");
         }
@@ -521,14 +520,14 @@ namespace TG_Bot.BusinessLayer.Concrete
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Ошибка получения изображения с камеры въезда - {ex.Message}");
+                _logger.Error($"Ошибка получения изображения с камеры въезда - {ex.Message}");
                 await _botClient.SendTextMessageAsync(
                     chatId: callbackQuery.Message.Chat.Id,
                     text: "Невозможно получить изображение с камеры въезда",
                     replyMarkup: _camerasKeyboard, cancellationToken: Token);
             }
 
-            _logger.LogInformation(string.IsNullOrEmpty(callbackQuery.From.FirstName)
+            _logger.Info(string.IsNullOrEmpty(callbackQuery.From.FirstName)
                 ? $"Запрос изображения с камеры въезда"
                 : $"Запрос изображения с камеры въезда от {callbackQuery.From.FirstName}");
             try
@@ -537,7 +536,7 @@ namespace TG_Bot.BusinessLayer.Concrete
             }
             catch (Exception ex)
             {
-                _logger.LogWarning($"Не удалось удалить изображение с камеры из временной директории - {ex.Message}");
+                _logger.Warn($"Не удалось удалить изображение с камеры из временной директории - {ex.Message}");
             }
         }
 
@@ -582,18 +581,18 @@ namespace TG_Bot.BusinessLayer.Concrete
             }
             catch (OperationCanceledException)
             {
-                _logger.LogWarning($"Загрузка фотографии отменена");
+                _logger.Warn($"Загрузка фотографии отменена");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex.Message);
+                _logger.Error(ex.Message);
                 await _botClient.SendTextMessageAsync(
                     chatId: callbackQuery.Message.Chat.Id,
                     text: "Невозможно получить изображение с камеры двора",
                     replyMarkup: _camerasKeyboard, cancellationToken: Token);
             }
 
-            _logger.LogInformation(string.IsNullOrEmpty(callbackQuery.From.FirstName)
+            _logger.Info(string.IsNullOrEmpty(callbackQuery.From.FirstName)
                 ? $"Запрос изображения с камеры двора"
                 : $"Запрос изображения с камеры двора от {callbackQuery.From.FirstName}");
             try
@@ -602,7 +601,7 @@ namespace TG_Bot.BusinessLayer.Concrete
             }
             catch (Exception ex)
             {
-                _logger.LogWarning($"Не удалось удалить изображение с камеры из временной директории - {ex.Message}");
+                _logger.Warn($"Не удалось удалить изображение с камеры из временной директории - {ex.Message}");
             }
         }
 
@@ -640,7 +639,7 @@ namespace TG_Bot.BusinessLayer.Concrete
 
         private async Task BotOnInlineQueryReceived(InlineQuery inlineQuery)
         {
-            _logger.LogInformation($"Received inline query from: {inlineQuery.From.Id}");
+            _logger.Info($"Received inline query from: {inlineQuery.From.Id}");
 
             InlineQueryResultBase[] results = {
                 // displayed result
@@ -669,7 +668,7 @@ namespace TG_Bot.BusinessLayer.Concrete
 
         private async Task UnknownUpdateHandlerAsync(Update update)
         {
-            _logger.LogWarning($"Unknown update type: {update.Type}");
+            _logger.Warn($"Unknown update type: {update.Type}");
         }
 
         public async Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
@@ -680,17 +679,17 @@ namespace TG_Bot.BusinessLayer.Concrete
                 _ => exception.ToString()
             };
 
-            _logger.LogError(ErrorMessage);
+            _logger.Error(ErrorMessage);
         }
 
         /// <inheritdoc />
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            _logger.LogDebug($"Bot service is starting");
+            _logger.Debug($"Bot service is starting");
             CancellationTokenSource.CreateLinkedTokenSource(Token, cancellationToken);
             Token.Register(() =>
             {
-                _logger.LogInformation($"Bot service stopping");
+                _logger.Info($"Bot service stopping");
             }, true);
 
             if (string.IsNullOrEmpty(BotToken))
@@ -707,17 +706,17 @@ namespace TG_Bot.BusinessLayer.Concrete
             {
                 _botClient.StartReceiving(new DefaultUpdateHandler(HandleUpdateAsync, HandleErrorAsync),
                         Token);
-                _logger.LogInformation($"Telegram bot started receiveing");
+                _logger.Info($"Telegram bot started receiveing");
             }, Token);
 
             try
             {
                 _executingTask.Start();
-                _logger.LogDebug("Telegram bot initiated");
+                _logger.Debug("Telegram bot initiated");
             }
             catch (Exception)
             {
-                _logger.LogError($"Работа бота отменена, не найден токен бота");
+                _logger.Error($"Работа бота отменена, не найден токен бота");
             }
             //TODO
             //_stoppingCts.Token.ThrowIfCancellationRequested();
@@ -735,18 +734,18 @@ namespace TG_Bot.BusinessLayer.Concrete
 
             try
             {
-                _logger.LogDebug($"Try to stop telegram bot receiving");
+                _logger.Debug($"Try to stop telegram bot receiving");
                 _botClient.StopReceiving();
             }
             catch (Exception ex)
             {
-                _logger.LogDebug($"Error while stopping bot receiving - {ex.Message}");
+                _logger.Debug($"Error while stopping bot receiving - {ex.Message}");
             }
 
             await Task.WhenAny(_executingTask, Task.Delay(-1, cancellationToken));
 
             cancellationToken.ThrowIfCancellationRequested();
-            _logger.LogInformation("Bot service stoppped");
+            _logger.Info("Bot service stoppped");
         }
 
         /// <inheritdoc />
@@ -754,7 +753,7 @@ namespace TG_Bot.BusinessLayer.Concrete
         {
             _executingTask.Dispose();
             Interlocked.Exchange(ref _botClient, null);
-            _logger.LogInformation("Dispose");
+            _logger.Info("Dispose");
             _stoppingCts.Dispose();
         }
     }
