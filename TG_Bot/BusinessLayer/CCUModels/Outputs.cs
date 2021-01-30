@@ -1,4 +1,5 @@
-﻿
+﻿using Newtonsoft.Json;
+
 namespace TG_Bot.BusinessLayer.CCUModels
 {
     public class Outputs
@@ -40,14 +41,19 @@ namespace TG_Bot.BusinessLayer.CCUModels
 
     }
 
+    [JsonObject]
     public class Output
     {
+        [JsonIgnore]
         public string Name { get; set; }
 
+        [JsonIgnore]
         public int Index { get; set; }
 
+        [JsonProperty]
         public int Number => this.Index + 1;
-        
+
+        [JsonIgnore]
         public string Meaning { get; set; }
     }
 }

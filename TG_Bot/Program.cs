@@ -1,12 +1,9 @@
-﻿using System;
-using System.IO;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using StructureMap;
-using TG_Bot.BusinessLayer;
 using TG_Bot.BusinessLayer.Abstract;
 using TG_Bot.BusinessLayer.Concrete;
 using TG_Bot.DAL;
@@ -29,11 +26,11 @@ namespace TG_Bot
                 {
                     config.Sources.Clear();
 
-                    var env = hostingContext.HostingEnvironment;
+                    //var env = hostingContext.HostingEnvironment;
 
-                    config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-                        .AddJsonFile($"appsettings.{env.EnvironmentName}.json",
-                            optional: true, reloadOnChange: true);
+                    config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+                        //.AddJsonFile($"appsettings.{env.EnvironmentName}.json",
+                        //    optional: true, reloadOnChange: true);
 
                     config.AddEnvironmentVariables();
 

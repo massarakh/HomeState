@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Web;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -89,9 +90,12 @@ namespace TG_Bot.BusinessLayer.Concrete
                 {
                     Authenticator = new HttpBasicAuthenticator(Login, Password)
                 };
-                var cmd = new CommandRequest { Command = request.Command, Output = request.Output, State = request.State };
+                string param = JsonConvert.SerializeObject(request, new JsonSerializerSettings()
+                {
+                    NullValueHandling = NullValueHandling.Ignore,
+                });
 
-                var req = new RestRequest().AddParameter("cmd", JsonConvert.SerializeObject(cmd));
+                var req = new RestRequest().AddParameter("cmd", param);
                 var response = client.Get(req);
                 model = JsonConvert.DeserializeObject<CcuState>(response.Content);
             }
@@ -126,16 +130,16 @@ namespace TG_Bot.BusinessLayer.Concrete
             {
                 throw new Exception($"Невозможно получить состояние контроллера - {ex.Message}");
             }
-
-            return $"Нагрев конвекторов - {model.Outputs[0].ToFormatted()}\n" +
-                   $"Бойлер - {model.Outputs[2].ToFormatted()}\n" +
-                   $"Тёплые полы (с/у)  - {model.Outputs[3].ToFormatted()}\n" +
-                   $"Спальня молодёжи - {model.Outputs[4].ToFormatted()}\n" +
-                   $"Кухня - {model.Outputs[5].ToFormatted()}\n" +
-                   $"Напряжение - {model.Power} V\n" +
-                   $"Температура контроллера - {model.Temp} °С\n" +
-                   $"Баланс - {model.Balance} ₽" +
-                   $"Уровень заряда батареи - {model.Battery.Charge}%";
+            return $"<pre>Нагрев конвекторов:       {model.Outputs[0].ToFormatted()}\n" +
+                    $"Бойлер:                   {model.Outputs[2].ToFormatted()}\n" +
+                    $"Тёплые полы (с/у):        {model.Outputs[3].ToFormatted()}\n" +
+                    $"Спальня молодёжи:         {model.Outputs[4].ToFormatted()}\n" +
+                    $"Кухня:                    {model.Outputs[5].ToFormatted()}\n" +
+                    $"\nСостояние контроллера\n" +
+                    $"Напряжение:               {model.Power} V\n" +
+                    $"Температура:              {model.Temp} °С\n" +
+                    $"Баланс:                   {model.Balance} ₽\n" +
+                    $"Уровень заряда батареи:   {model.Battery.Charge}%</pre>";
         }
     }
 }

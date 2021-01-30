@@ -17,46 +17,45 @@ namespace TG_Bot.BusinessLayer.Concrete
         public async Task<string> LastState()
         {
             var state = await _repository.GetState();
-            return $"Время:               {state.Timestamp}\n" +
-                   $"Фаза 1:              {state.Electricity.Phase1} А\n" +
-                   $"Фаза 2:              {state.Electricity.Phase2} A\n" +
-                   $"Фаза 3:              {state.Electricity.Phase3} A\n" +
-                   $"Сумма фаз:      {state.Electricity.PhaseSumm} A\n" +
-                   $"Бойлер, питание:    {state.Boiler.ToFormatted()}\n" +
-                   //$"Бойлер, нагрев:     {state.BoilerHeat.ToFormatted()}\n" +
-                   $"Тёплые полы: {state.Heat.Floor.ToFormatted()}\n" +
-                   $"Батареи:           {state.Heat.Batteries.ToFormatted()}\n" +
+            return $"<pre>Время:           {state.Timestamp}\n" +
+                   $"Фаза 1:          {state.Electricity.Phase1} А\n" +
+                   $"Фаза 2:          {state.Electricity.Phase2} A\n" +
+                   $"Фаза 3:          {state.Electricity.Phase3} A\n" +
+                   $"Сумма фаз:       {state.Electricity.PhaseSumm} A\n" +
+                   $"Бойлер, питание: {state.Boiler.ToFormatted()}\n" +
+                   $"Тёплые полы:     {state.Heat.Floor.ToFormatted()}\n" +
+                   $"Батареи:         {state.Heat.Batteries.ToFormatted()}\n" +
                    $"Гостиная (t°):   {state.Temperature.LivingRoom} °С\n" +
-                   $"Гостиная (%):   {state.Humidity.LivingRoom} %\n" +
+                   $"Гостиная (%):    {state.Humidity.LivingRoom} %\n" +
                    $"Спальня (t°):    {state.Temperature.Bedroom} °С\n" +
-                   $"Спальня (%):    {state.Humidity.Bedroom} %\n" +
-                   $"Сарай (t°):         {state.Temperature.Barn} °С\n" +
-                   $"Улица (t°):         {state.Temperature.Outside} °С\n" +
-                   $"Энергия:            {state.Energy} кВт⋅ч";
+                   $"Спальня (%):     {state.Humidity.Bedroom} %\n" +
+                   $"Сарай (t°):      {state.Temperature.Barn} °С\n" +
+                   $"Улица (t°):      {state.Temperature.Outside} °С\n" +
+                   $"Энергия:         {state.Energy} кВт⋅ч</pre>";
         }
 
         /// <inheritdoc />
         public async Task<string> Electricity()
         {
             var state = await _repository.GetState();
-            return $"Время:  {state.Timestamp}\n" +
-                   $"Фаза 1:  {state.Electricity.Phase1} А\n" +
-                   $"Фаза 2:  {state.Electricity.Phase2} A\n" +
-                   $"Фаза 3:  {state.Electricity.Phase3} A\n" +
-                   $"Сумма фаз:  {state.Electricity.PhaseSumm} A\n";
+            return $"<pre>Время:     {state.Timestamp}\n" +
+                   $"Фаза 1:    {state.Electricity.Phase1} А\n" +
+                   $"Фаза 2:    {state.Electricity.Phase2} A\n" +
+                   $"Фаза 3:    {state.Electricity.Phase3} A\n" +
+                   $"Сумма фаз: {state.Electricity.PhaseSumm} A</pre>\n";
         }
 
         /// <inheritdoc />
         public async Task<string> Temperature()
         {
             var state = await _repository.GetState();
-            return $"Время:  {state.Timestamp}\n" +
-                   $"Гостиная (t°):   {state.Temperature.LivingRoom} °С\n" +
-                   $"Гостиная (%):   {state.Humidity.LivingRoom} %\n" +
-                   $"Спальня (t°):    {state.Temperature.Bedroom} °С\n" +
-                   $"Спальня (%):    {state.Humidity.Bedroom} %\n" +
-                   $"Сарай (t°):         {state.Temperature.Barn} °С\n" +
-                   $"Улица (t°):         {state.Temperature.Outside} °С\n";
+            return $"<pre>Время:         {state.Timestamp}\n" +
+                   $"Гостиная (t°): {state.Temperature.LivingRoom} °С\n" +
+                   $"Гостиная (%):  {state.Humidity.LivingRoom} %\n" +
+                   $"Спальня (t°):  {state.Temperature.Bedroom} °С\n" +
+                   $"Спальня (%):   {state.Humidity.Bedroom} %\n" +
+                   $"Сарай (t°):    {state.Temperature.Barn} °С\n" +
+                   $"Улица (t°):    {state.Temperature.Outside} °С</pre>\n";
 
         }
 
@@ -64,9 +63,9 @@ namespace TG_Bot.BusinessLayer.Concrete
         public async Task<string> Heating()
         {
             var state = await _repository.GetState();
-            return $"Бойлер:             {state.Boiler.ToFormatted()}\n" +
-                   $"Тёплые полы: {state.Heat.Floor.ToFormatted()}\n" +
-                   $"Батареи:           {state.Heat.Batteries.ToFormatted()}\n";
+            return $"<pre>Бойлер:        {state.Boiler.ToFormatted()}\n" +
+                   $"Тёплые полы:   {state.Heat.Floor.ToFormatted()}\n" +
+                   $"Батареи:       {state.Heat.Batteries.ToFormatted()}</pre>\n";
         }
 
         //private bool BoilerHeat(Data data)

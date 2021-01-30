@@ -481,7 +481,7 @@ namespace TG_Bot.BusinessLayer.Concrete
                 await _botClient.SendTextMessageAsync(
                     chatId: callbackQuery.Message.Chat.Id,
                     text: result,
-                    replyMarkup: _controlKeyboard, cancellationToken: Token);
+                    replyMarkup: _controlKeyboard, cancellationToken: Token, parseMode: ParseMode.Html);
             }
             catch (Exception ex)
             {
@@ -632,7 +632,8 @@ namespace TG_Bot.BusinessLayer.Concrete
                 replyMarkup: new InlineKeyboardMarkup(new[]
                 {
                     InlineKeyboardButton.WithCallbackData("Назад", "back"),
-                }), cancellationToken: Token);
+                }), cancellationToken: Token,
+                parseMode: ParseMode.Html);
         }
 
         #region Inline Mode
