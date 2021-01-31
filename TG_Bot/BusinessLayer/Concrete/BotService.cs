@@ -147,7 +147,8 @@ namespace TG_Bot.BusinessLayer.Concrete
                         }
 
                     default:
-                        return string.Empty;
+                        _botToken = tokenSection.Value;
+                        return _botToken;
                 }
             }
         }
