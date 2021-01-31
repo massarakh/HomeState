@@ -118,11 +118,11 @@ namespace TG_Bot.BusinessLayer.Concrete
                         StartInfo = procStartInfo
                     };
                     proc.Start();
-                    proc.WaitForExit();
+                    proc.WaitForExit(20000);
                     return proc.ExitCode;
                 }, stoppingCtsToken);
                 await Task.WhenAny(task, Task.Delay(-1, stoppingCtsToken));
-                _logger.Debug($"Запрос изображения завершился с кодом {task}");
+                _logger.Debug($"Запрос изображения завершился с кодом {task.Result}");
                 if (!File.Exists(pathToSave))
                 {
                     throw new Exception($"Изображение не сохранено с помощью консольной программы ffmpeg");
