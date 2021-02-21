@@ -351,3 +351,4 @@ MigrationBackup/
 
 BotToken.txt
 /TG_Bot/BotToken_original.txt
+/TG_Bot/UserIds.txt

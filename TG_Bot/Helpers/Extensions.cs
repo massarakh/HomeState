@@ -18,18 +18,10 @@ namespace TG_Bot.Helpers
             return state == 1 ? "Вкл." : "Выкл.";
         }
 
-        //public static int[] ToArray(this Outputs outputs)
-        //{
-        //    return new[]
-        //    {
-        //        outputs.Relay1,
-        //        outputs.Relay2,
-        //        outputs.Output1,
-        //        outputs.Output2,
-        //        outputs.Output3,
-        //        outputs.Output4,
-        //        outputs.Output5
-        //    };
-        //}
+        public static DateTime StartOfWeek(this DateTime dt, DayOfWeek startOfWeek)
+        {
+            int diff = (7 + (dt.DayOfWeek - startOfWeek)) % 7;
+            return dt.AddDays(-1 * diff).Date;
+        }
     }
 }

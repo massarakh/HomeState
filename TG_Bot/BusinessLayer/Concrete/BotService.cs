@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Telegram.Bot;
@@ -18,6 +19,7 @@ using TG_Bot.BusinessLayer.Abstract;
 using TG_Bot.BusinessLayer.CCUModels;
 using File = System.IO.File;
 using NLog;
+using TG_Bot.Helpers;
 
 namespace TG_Bot.BusinessLayer.Concrete
 {
@@ -28,6 +30,7 @@ namespace TG_Bot.BusinessLayer.Concrete
         private readonly IConfiguration _configuration;
         private readonly IRestService _restService;
         private ITelegramBotClient _botClient;
+        private BotHelper _botHelper;
         private Task _executingTask;
         private readonly CancellationTokenSource _stoppingCts =
             new CancellationTokenSource();
@@ -167,13 +170,13 @@ namespace TG_Bot.BusinessLayer.Concrete
             return File.ReadAllText(PathToken);
         }
 
-        public BotService(/*ILogger<BotService> logger, */IStateService stateService, ICamService camService, IConfiguration configuration, IRestService restService)
+        public BotService(IStateService stateService, ICamService camService, IConfiguration configuration, IRestService restService)
         {
-            //_logger = logger;
             _stateService = stateService;
             _camService = camService;
             _configuration = configuration;
             _restService = restService;
+            _botHelper = new BotHelper(configuration);
         }
 
         public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
@@ -183,7 +186,7 @@ namespace TG_Bot.BusinessLayer.Concrete
                 UpdateType.Message => BotOnMessageReceived(update.Message),
                 UpdateType.EditedMessage => BotOnMessageReceived(update.Message),
                 UpdateType.CallbackQuery => BotOnCallbackQueryReceived(update.CallbackQuery),
-                UpdateType.InlineQuery => BotOnInlineQueryReceived(update.InlineQuery),
+                //UpdateType.InlineQuery => BotOnInlineQueryReceived(update.InlineQuery),
                 //UpdateType.ChosenInlineResult => BotOnChosenInlineResultReceived(update.ChosenInlineResult),
                 // UpdateType.Unknown:
                 // UpdateType.ChannelPost:
@@ -204,8 +207,50 @@ namespace TG_Bot.BusinessLayer.Concrete
             }
         }
 
+        /// <summary>
+        /// Проверка пользователя
+        /// </summary>
+        /// <param name="query">Запрос</param>
+        /// <returns>Результат проверки</returns>
+        private async Task<bool> Authenticate(CallbackQuery query)
+        {
+            if (!_botHelper.IsAuthorized(query.From.Id))
+            {
+                await _botClient.AnswerCallbackQueryAsync(
+                    query.Id, cancellationToken: Token);
+                await _botClient.SendTextMessageAsync(
+                    chatId: query.Message.Chat.Id,
+                    text: "Not authorized", cancellationToken: Token);
+                _logger.Error($"Not authorized user - {query.From.Id} ({query.From.FirstName})");
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Проверка пользователя
+        /// </summary>
+        /// <param name="message">Запрос</param>
+        /// <returns>Результат проверки</returns>
+        private async Task<bool> Authenticate(Message message)
+        {
+            if (!_botHelper.IsAuthorized(message.From.Id))
+            {
+                await _botClient.SendTextMessageAsync(
+                    chatId: message.Chat.Id,
+                    text: "Not authorized", cancellationToken: Token);
+                _logger.Error($"Not authorized user - {message.From.Id} ({message.From.FirstName})");
+                return false;
+            }
+
+            return true;
+        }
+
         private async Task BotOnMessageReceived(Message message)
         {
+            if (!await Authenticate(message))
+                return;
             _logger.Info($"Старт работы с ботом");
             if (message.Type != MessageType.Text)
                 return;
@@ -303,6 +348,8 @@ namespace TG_Bot.BusinessLayer.Concrete
         // Process Inline Keyboard callback data
         private async Task BotOnCallbackQueryReceived(CallbackQuery callbackQuery)
         {
+            if (!await Authenticate(callbackQuery))
+                return;
             int stateValue;
             switch (callbackQuery.Data)
             {
@@ -641,7 +688,6 @@ namespace TG_Bot.BusinessLayer.Concrete
         private async Task BotOnInlineQueryReceived(InlineQuery inlineQuery)
         {
             _logger.Info($"Received inline query from: {inlineQuery.From.Id}");
-
             InlineQueryResultBase[] results = {
                 // displayed result
                 new InlineQueryResultArticle(
@@ -708,6 +754,7 @@ namespace TG_Bot.BusinessLayer.Concrete
                 _botClient.StartReceiving(new DefaultUpdateHandler(HandleUpdateAsync, HandleErrorAsync),
                         Token);
                 _logger.Info($"Telegram bot started receiveing");
+
             }, Token);
 
             try
