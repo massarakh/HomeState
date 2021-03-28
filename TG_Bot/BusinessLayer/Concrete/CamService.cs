@@ -51,9 +51,25 @@ namespace TG_Bot.BusinessLayer.Concrete
         }
 
         /// <summary>
+        /// Адрес для подключения к камере обзора
+        /// </summary>
+        private string OverviewCam
+        {
+            get
+            {
+                IEnumerable<IConfigurationSection> sections = _configuration.GetSection("OverviewCam").GetChildren();
+                var cam = sections.FirstOrDefault(_ => _.Key == "rtsp");
+                if (cam != null) return cam.Value;
+                _logger.Error($"Не найден адрес для камеры обзора, выход");
+                return string.Empty;
+
+            }
+        }
+
+        /// <summary>
         /// Имя для файла со снимком
         /// </summary>
-        private string CamFileName => DateTime.Now.ToString("H'_'mm'_'ss d MMM yyyy") + ".jpg";
+        private string CamFileName => DateTime.Now.ToString("H'_'mm'_'ss") + ".jpg";
 
         public CamService(IConfiguration configuration)
         {
@@ -92,13 +108,23 @@ namespace TG_Bot.BusinessLayer.Concrete
             return pathToSave;
         }
 
-        /// <param name="stoppingCtsToken"></param>
         /// <inheritdoc />
-        public async Task<Tuple<string, string>> GetYardCam(CancellationToken stoppingCtsToken)
+        public async Task<Tuple<string, string>> GetFfmpegCam(CancellationToken stoppingCtsToken, string camName)
         {
-            string fileNameToSave = "YardCam_" + CamFileName;
+            string fileNameToSave = camName + "_" + CamFileName;
+            //string fileNameToSave = "YardCam_" + CamFileName;
+            //string pathToSave = Path.Combine("D:\\", fileNameToSave);
             string pathToSave = Path.Combine(Path.GetTempPath(), fileNameToSave);
-            string cmd = "/c " + YardCam + "\"" + pathToSave + "\"";
+            string cmd;
+            if (camName.ToLower().Contains("yard"))
+            {
+                cmd = "/c " + YardCam + " \"" + pathToSave + "\"";
+            }
+            else
+            {
+                cmd = "/c " + OverviewCam + " \"" + pathToSave + "\"";
+            }
+            //string cmd = "/c " + YardCam + "\"" + pathToSave + "\"";
             _logger.Debug($"Команда запроса - {cmd}");
             try
             {
@@ -131,7 +157,7 @@ namespace TG_Bot.BusinessLayer.Concrete
             }
             catch (Exception ex)
             {
-                throw new Exception($"Не удалось получить изображение с камеры двора - {ex.Message}");
+                throw new Exception($"Не удалось получить изображение с камеры - {ex.Message}");
             }
         }
 
@@ -153,14 +179,13 @@ namespace TG_Bot.BusinessLayer.Concrete
                 StartInfo = procStartInfo
             };
             proc.Start();
-            string result = proc.StandardOutput.ReadLine();
+            string result = new string(proc.StandardOutput.ReadLine()?.Take(21).ToArray());
 
-            if (result != null && result.Contains("ffmpeg version"))
+            if (!string.IsNullOrEmpty(result) && result.Contains("ffmpeg version"))
             {
                 _logger.Info(result);
                 return true;
             }
-            //_logger.LogError($"Не найден ffmpeg в системе");
             return false;
         }
     }

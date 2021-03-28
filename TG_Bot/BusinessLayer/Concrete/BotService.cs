@@ -20,6 +20,7 @@ using TG_Bot.BusinessLayer.CCUModels;
 using File = System.IO.File;
 using NLog;
 using TG_Bot.Helpers;
+using static TG_Bot.Helpers.Additions;
 
 namespace TG_Bot.BusinessLayer.Concrete
 {
@@ -60,6 +61,46 @@ namespace TG_Bot.BusinessLayer.Concrete
                 {
                     InlineKeyboardButton.WithCallbackData("Управление", "control"),
                     InlineKeyboardButton.WithCallbackData("Камеры","cameras"),
+                },
+                new []
+                {
+                    InlineKeyboardButton.WithCallbackData("Статистика", "stats"),
+                }
+            });
+
+        /// <summary>
+        /// Клавиатура для статистики
+        /// </summary>
+        private InlineKeyboardMarkup _statsKeyboard =>
+            new InlineKeyboardMarkup(new[]
+            {
+                new[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Сегодня", "today"),
+                },
+                new[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Выходные", "weekend"),
+                },
+                new[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Неделя", "week"),
+                },
+                new[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Месяц", "month"),
+                },
+                new[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Время года", "season"),
+                },
+                new[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Год", "year"),
+                },
+                new []
+                {
+                    InlineKeyboardButton.WithCallbackData("Назад", "back")
                 }
             });
 
@@ -73,6 +114,10 @@ namespace TG_Bot.BusinessLayer.Concrete
             {
                 InlineKeyboardButton.WithCallbackData("Въезд", "entrance"),
                 InlineKeyboardButton.WithCallbackData("Двор", "yard"),
+            },
+            new[]
+            {
+                InlineKeyboardButton.WithCallbackData("Обзор", "overview"),
             },
             new []
             {
@@ -351,8 +396,10 @@ namespace TG_Bot.BusinessLayer.Concrete
             if (!await Authenticate(callbackQuery))
                 return;
             int stateValue;
+            string result;
             switch (callbackQuery.Data)
             {
+                #region Запрос состояния
                 case "state":
                     var state = await _stateService.LastState();
                     await Answer(callbackQuery, state);
@@ -384,34 +431,34 @@ namespace TG_Bot.BusinessLayer.Concrete
                         ? $"Запрос показаний температуры"
                         : $"Запрос показаний температуры от {callbackQuery.From.FirstName}");
                     break;
+                #endregion
 
+                #region Камеры
                 case "cameras":
-                    await _botClient.AnswerCallbackQueryAsync(
-                        callbackQuery.Id, cancellationToken: Token);
-
-                    //удаление главной клавиатуры
-                    await _botClient.EditMessageReplyMarkupAsync(
-                        chatId: callbackQuery.Message.Chat.Id,
-                        messageId: callbackQuery.Message.MessageId,
-                        replyMarkup: _camerasKeyboard, cancellationToken: Token);
+                    await AnswerAndSendKeyboard(callbackQuery, _camerasKeyboard);
                     break;
 
+                case "entrance":
+                    await ReplyEntranceCam(callbackQuery);
+                    break;
+
+                case "yard":
+                    await ReplyYardCam(callbackQuery);
+                    break;
+
+                case "overview":
+                    await ReplyOverviewCam(callbackQuery);
+                    break;
+                #endregion
+
+                #region Управление
                 case "control":
-                    await _botClient.AnswerCallbackQueryAsync(
-                        callbackQuery.Id, cancellationToken: Token);
-
-                    //удаление главной клавиатуры
-                    await _botClient.EditMessageReplyMarkupAsync(
-                        chatId: callbackQuery.Message.Chat.Id,
-                        messageId: callbackQuery.Message.MessageId,
-                        replyMarkup: _controlKeyboard, cancellationToken: Token);
+                    await AnswerAndSendKeyboard(callbackQuery, _controlKeyboard);
                     break;
-
 
                 case "relay1_enable":
                 case "relay1_disable":
-                    stateValue = callbackQuery.Data.Contains("enable") ? 1 : 0;
-                    await ReplySwitchOutput(callbackQuery, _outputs.Relay1, stateValue);
+                    await ReplySwitchOutput(callbackQuery, _outputs.Relay1, callbackQuery.Data.Contains("enable") ? 1 : 0);
                     break;
 
                 case "output1_enable":
@@ -441,22 +488,99 @@ namespace TG_Bot.BusinessLayer.Concrete
                 case "output_states":
                     await ReplyControllerState(callbackQuery);
                     break;
+                #endregion
 
-                case "entrance":
-                    await ReplyEntranceCam(callbackQuery);
+                #region Статистика
+                case "stats":
+                    await AnswerAndSendKeyboard(callbackQuery, _statsKeyboard);
                     break;
 
-                case "yard":
-                    await ReplyYardCam(callbackQuery);
+                case "today":
+                    result = await _stateService.GetStatistics(StatType.Day);
+
+                    //удаление клавиатуры у предыдущего сообщения
+                    await RemoveKeyboardFromPrevious(callbackQuery);
+
+                    //отправка результата вместе с клавиатурой
+                    await _botClient.SendTextMessageAsync(
+                        chatId: callbackQuery.Message.Chat.Id,
+                        text: result,
+                        replyMarkup: _statsKeyboard, cancellationToken: Token, parseMode: ParseMode.Html);
+
+                    _logger.Info(string.IsNullOrEmpty(callbackQuery.From.FirstName)
+                        ? $"Запрос статистики за день"
+                        : $"Запрос статистики за день от {callbackQuery.From.FirstName}");
                     break;
+
+                case "weekend":
+                    result = await _stateService.GetStatistics(StatType.Weekend);
+                    //удаление клавиатуры у предыдущего сообщения
+                    await RemoveKeyboardFromPrevious(callbackQuery);
+
+                    await _botClient.SendTextMessageAsync(
+                        chatId: callbackQuery.Message.Chat.Id,
+                        text: result,
+                        replyMarkup: _statsKeyboard, cancellationToken: Token, parseMode: ParseMode.Html);
+                    _logger.Info(string.IsNullOrEmpty(callbackQuery.From.FirstName)
+                        ? $"Запрос статистики за выходные"
+                        : $"Запрос статистики за выходные от {callbackQuery.From.FirstName}");
+                    break;
+
+                case "week":
+                    result = await _stateService.GetStatistics(StatType.Week);
+                    //удаление клавиатуры у предыдущего сообщения
+                    await RemoveKeyboardFromPrevious(callbackQuery);
+                    await _botClient.SendTextMessageAsync(
+                        chatId: callbackQuery.Message.Chat.Id,
+                        text: result,
+                        replyMarkup: _statsKeyboard, cancellationToken: Token, parseMode: ParseMode.Html);
+                    _logger.Info(string.IsNullOrEmpty(callbackQuery.From.FirstName)
+                        ? $"Запрос статистики за неделю"
+                        : $"Запрос статистики за неделю от {callbackQuery.From.FirstName}");
+                    break;
+
+                case "month":
+                    result = await _stateService.GetStatistics(StatType.Month);
+                    //удаление клавиатуры у предыдущего сообщения
+                    await RemoveKeyboardFromPrevious(callbackQuery);
+                    await _botClient.SendTextMessageAsync(
+                        chatId: callbackQuery.Message.Chat.Id,
+                        text: result,
+                        replyMarkup: _statsKeyboard, cancellationToken: Token, parseMode: ParseMode.Html);
+                    _logger.Info(string.IsNullOrEmpty(callbackQuery.From.FirstName)
+                        ? $"Запрос статистики за месяц"
+                        : $"Запрос статистики за месяц от {callbackQuery.From.FirstName}");
+                    break;
+
+                case "season":
+                    result = await _stateService.GetStatistics(StatType.Season);
+                    //удаление клавиатуры у предыдущего сообщения
+                    await RemoveKeyboardFromPrevious(callbackQuery);
+                    await _botClient.SendTextMessageAsync(
+                        chatId: callbackQuery.Message.Chat.Id,
+                        text: result,
+                        replyMarkup: _statsKeyboard, cancellationToken: Token, parseMode: ParseMode.Html);
+                    _logger.Info(string.IsNullOrEmpty(callbackQuery.From.FirstName)
+                        ? $"Запрос статистики за время года"
+                        : $"Запрос статистики за время года от {callbackQuery.From.FirstName}");
+                    break;
+
+                case "year":
+                    result = await _stateService.GetStatistics(StatType.Year);
+                    //удаление клавиатуры у предыдущего сообщения
+                    await RemoveKeyboardFromPrevious(callbackQuery);
+                    await _botClient.SendTextMessageAsync(
+                        chatId: callbackQuery.Message.Chat.Id,
+                        text: result,
+                        replyMarkup: _statsKeyboard, cancellationToken: Token, parseMode: ParseMode.Html);
+                    _logger.Info(string.IsNullOrEmpty(callbackQuery.From.FirstName)
+                        ? $"Запрос статистики за год"
+                        : $"Запрос статистики за год от {callbackQuery.From.FirstName}");
+                    break;
+                #endregion
 
                 case "back":
-                    await _botClient.AnswerCallbackQueryAsync(
-                        callbackQuery.Id, cancellationToken: Token);
-                    await _botClient.EditMessageReplyMarkupAsync(
-                         chatId: callbackQuery.Message.Chat.Id,
-                         messageId: callbackQuery.Message.MessageId,
-                         replyMarkup: _keyboard, cancellationToken: Token);
+                    await AnswerAndSendKeyboard(callbackQuery, _keyboard);
                     break;
 
                 default:
@@ -464,6 +588,37 @@ namespace TG_Bot.BusinessLayer.Concrete
                     break;
             }
 
+        }
+
+        /// <summary>
+        /// Удаление клавиатуры у предыдущего сообщения
+        /// </summary>
+        /// <param name="callbackQuery"></param>
+        /// <returns></returns>
+        private async Task RemoveKeyboardFromPrevious(CallbackQuery callbackQuery)
+        {
+            await _botClient.EditMessageReplyMarkupAsync(
+                chatId: callbackQuery.Message.Chat.Id,
+                messageId: callbackQuery.Message.MessageId,
+                replyMarkup: null, cancellationToken: Token);
+        }
+
+        /// <summary>
+        /// Ответ и отправка нужной клавиатуры
+        /// </summary>
+        /// <param name="callbackQuery"></param>
+        /// <param name="keyboard"></param>
+        /// <returns></returns>
+        private async Task AnswerAndSendKeyboard(CallbackQuery callbackQuery, InlineKeyboardMarkup keyboard)
+        {
+            await _botClient.AnswerCallbackQueryAsync(
+                callbackQuery.Id, cancellationToken: Token);
+
+            //удаление главной клавиатуры
+            await _botClient.EditMessageReplyMarkupAsync(
+                chatId: callbackQuery.Message.Chat.Id,
+                messageId: callbackQuery.Message.MessageId,
+                replyMarkup: keyboard, cancellationToken: Token);
         }
 
         /// <summary>
@@ -489,6 +644,9 @@ namespace TG_Bot.BusinessLayer.Concrete
                     State = stateValue
                 });
 
+                //удаление клавиатуры у предыдущего сообщения
+                await RemoveKeyboardFromPrevious(callbackQuery);
+
                 //ответ
                 await _botClient.SendTextMessageAsync(
                     chatId: callbackQuery.Message.Chat.Id,
@@ -498,6 +656,8 @@ namespace TG_Bot.BusinessLayer.Concrete
             catch (Exception ex)
             {
                 _logger.Error($"Ошибка - {ex.Message}");
+                //удаление клавиатуры у предыдущего сообщения
+                await RemoveKeyboardFromPrevious(callbackQuery);
                 await _botClient.SendTextMessageAsync(
                     chatId: callbackQuery.Message.Chat.Id,
                     text: "Ошибка переключения состояния выхода",
@@ -524,6 +684,9 @@ namespace TG_Bot.BusinessLayer.Concrete
                 //переключение выхода
                 var result = _restService.GetState();
 
+                //удаление клавиатуры у предыдущего сообщения
+                await RemoveKeyboardFromPrevious(callbackQuery);
+
                 //ответ
                 await _botClient.SendTextMessageAsync(
                     chatId: callbackQuery.Message.Chat.Id,
@@ -533,6 +696,8 @@ namespace TG_Bot.BusinessLayer.Concrete
             catch (Exception ex)
             {
                 _logger.Error($"Ошибка - {ex.Message}");
+                //удаление клавиатуры у предыдущего сообщения
+                await RemoveKeyboardFromPrevious(callbackQuery);
                 await _botClient.SendTextMessageAsync(
                     chatId: callbackQuery.Message.Chat.Id,
                     text: "Ошибка получения состояния контроллера",
@@ -561,6 +726,9 @@ namespace TG_Bot.BusinessLayer.Concrete
             {
                 filePath = _camService.GetEntranceCam(out var fileName);
                 await using FileStream fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+                //удаление клавиатуры у предыдущего сообщения
+                await RemoveKeyboardFromPrevious(callbackQuery);
                 await _botClient.SendPhotoAsync(
                     chatId: callbackQuery.Message.Chat.Id,
                     photo: new InputOnlineFile(fileStream, fileName),
@@ -569,6 +737,8 @@ namespace TG_Bot.BusinessLayer.Concrete
             catch (Exception ex)
             {
                 _logger.Error($"Ошибка получения изображения с камеры въезда - {ex.Message}");
+                //удаление клавиатуры у предыдущего сообщения
+                await RemoveKeyboardFromPrevious(callbackQuery);
                 await _botClient.SendTextMessageAsync(
                     chatId: callbackQuery.Message.Chat.Id,
                     text: "Невозможно получить изображение с камеры въезда",
@@ -604,7 +774,7 @@ namespace TG_Bot.BusinessLayer.Concrete
             //отправка фото
             try
             {
-                var task = _camService.GetYardCam(Token);
+                var task = _camService.GetFfmpegCam(Token, "YardCam");
                 while (!task.IsCompleted)
                 {
                     if (_stoppingCts.Token.IsCancellationRequested)
@@ -618,10 +788,13 @@ namespace TG_Bot.BusinessLayer.Concrete
                 }
 
                 var (fileP, fileName) = task.Result;
-                //var (fileP, fileName) = await _camService.GetYardCam();
+                //var (fileP, fileName) = await _camService.GetFfmpegCam();
                 filePathToDelete = fileP;
                 await using FileStream fileStream =
                     new FileStream(fileP, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+                //удаление клавиатуры у предыдущего сообщения
+                await RemoveKeyboardFromPrevious(callbackQuery);
                 await _botClient.SendPhotoAsync(
                     chatId: callbackQuery.Message.Chat.Id,
                     photo: new InputOnlineFile(fileStream, fileName),
@@ -634,6 +807,8 @@ namespace TG_Bot.BusinessLayer.Concrete
             catch (Exception ex)
             {
                 _logger.Error(ex.Message);
+                //удаление клавиатуры у предыдущего сообщения
+                await RemoveKeyboardFromPrevious(callbackQuery);
                 await _botClient.SendTextMessageAsync(
                     chatId: callbackQuery.Message.Chat.Id,
                     text: "Невозможно получить изображение с камеры двора",
@@ -653,12 +828,83 @@ namespace TG_Bot.BusinessLayer.Concrete
             }
         }
 
+        //TODO надо переписать и привести к общему виду в версии 2.0
+        /// <summary>
+        /// Ответ на запрос изображения с камеры обзора
+        /// </summary>
+        /// <param name="callbackQuery"></param>
+        /// <returns></returns>
+        private async Task ReplyOverviewCam(CallbackQuery callbackQuery)
+        {
+            //ответ на кнопку
+            await _botClient.AnswerCallbackQueryAsync(
+                callbackQuery.Id, cancellationToken: Token);
+            string filePathToDelete = string.Empty;
+            // Показываем статус отправки фото
+            await _botClient.SendChatActionAsync(callbackQuery.Message.Chat.Id, ChatAction.UploadPhoto, Token);
+            //отправка фото
+            try
+            {
+                var task = _camService.GetFfmpegCam(Token, "OverviewCam");
+                while (!task.IsCompleted)
+                {
+                    if (_stoppingCts.Token.IsCancellationRequested)
+                    {
+                        Token.ThrowIfCancellationRequested();
+                    }
+
+                    await _botClient.SendChatActionAsync(callbackQuery.Message.Chat.Id, ChatAction.UploadPhoto,
+                        Token);
+                    await Task.Delay(100, Token);
+                }
+
+                var (fileP, fileName) = task.Result;
+                //var (fileP, fileName) = await _camService.GetFfmpegCam();
+                filePathToDelete = fileP;
+                await using FileStream fileStream =
+                    new FileStream(fileP, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+                //удаление клавиатуры у предыдущего сообщения
+                await RemoveKeyboardFromPrevious(callbackQuery);
+                await _botClient.SendPhotoAsync(
+                    chatId: callbackQuery.Message.Chat.Id,
+                    photo: new InputOnlineFile(fileStream, fileName),
+                    replyMarkup: _camerasKeyboard, cancellationToken: Token);
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.Warn($"Загрузка фотографии отменена");
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.Message);
+                //удаление клавиатуры у предыдущего сообщения
+                await RemoveKeyboardFromPrevious(callbackQuery);
+                await _botClient.SendTextMessageAsync(
+                    chatId: callbackQuery.Message.Chat.Id,
+                    text: "Невозможно получить изображение с камеры обзора",
+                    replyMarkup: _camerasKeyboard, cancellationToken: Token);
+            }
+
+            _logger.Info(string.IsNullOrEmpty(callbackQuery.From.FirstName)
+                ? $"Запрос изображения с камеры обзора"
+                : $"Запрос изображения с камеры обзора от {callbackQuery.From.FirstName}");
+            try
+            {
+                File.Delete(filePathToDelete);
+            }
+            catch (Exception ex)
+            {
+                _logger.Warn($"Не удалось удалить изображение с камеры из временной директории - {ex.Message}");
+            }
+        }
 
         /// <summary>
         /// Ответ
         /// </summary>
         /// <param name="callbackQuery">Callback запрос</param>
         /// <param name="result">Строка для ответа</param>
+        /// <param name="back"></param>
         /// <returns>Инстанс таски для возврата</returns>
         private async Task Answer(CallbackQuery callbackQuery, string result)
         {
@@ -682,6 +928,8 @@ namespace TG_Bot.BusinessLayer.Concrete
                 }), cancellationToken: Token,
                 parseMode: ParseMode.Html);
         }
+
+
 
         #region Inline Mode
 

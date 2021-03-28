@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using TG_Bot.Helpers;
 
 namespace TG_Bot.BusinessLayer.Abstract
 {
@@ -11,6 +12,8 @@ namespace TG_Bot.BusinessLayer.Abstract
         Task<string> Temperature();
         
         Task<string> Heating();
+
+        Task<string> GetStatistics(Additions.StatType type);
 
     }
 }

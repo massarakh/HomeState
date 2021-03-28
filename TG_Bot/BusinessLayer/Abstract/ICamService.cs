@@ -14,10 +14,11 @@ namespace TG_Bot.BusinessLayer.Abstract
         string GetEntranceCam(out string fileName);
 
         /// <summary>
-        /// Получение изображения с камеры двора
+        /// Получение изображения с камер, поддерживающих ffmpeg
         /// </summary>
         /// <param name="stoppingCtsToken"></param>
+        /// <param name="camName">Имя камеры</param>
         /// <returns>Поток</returns>
-        Task<Tuple<string, string>> GetYardCam(CancellationToken stoppingCtsToken);
+        Task<Tuple<string, string>> GetFfmpegCam(CancellationToken stoppingCtsToken, string camName);
     }
 }
