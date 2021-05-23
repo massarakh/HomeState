@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Microsoft.Extensions.Configuration;
 using NLog;
 
@@ -48,5 +49,7 @@ namespace TG_Bot.Helpers
 
             return _authorizedIds.Contains(id);
         }
+
+        
     }
 }

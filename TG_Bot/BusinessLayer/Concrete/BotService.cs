@@ -788,7 +788,6 @@ namespace TG_Bot.BusinessLayer.Concrete
                 }
 
                 var (fileP, fileName) = task.Result;
-                //var (fileP, fileName) = await _camService.GetFfmpegCam();
                 filePathToDelete = fileP;
                 await using FileStream fileStream =
                     new FileStream(fileP, FileMode.Open, FileAccess.Read, FileShare.Read);
