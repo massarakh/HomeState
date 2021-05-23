@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
@@ -112,28 +113,55 @@ namespace TG_Bot.BusinessLayer.Concrete
         public async Task<Tuple<string, string>> GetFfmpegCam(CancellationToken stoppingCtsToken, string camName)
         {
             string fileNameToSave = camName + "_" + CamFileName;
-            //string fileNameToSave = "YardCam_" + CamFileName;
-            //string pathToSave = Path.Combine("D:\\", fileNameToSave);
             string pathToSave = Path.Combine(Path.GetTempPath(), fileNameToSave);
             string cmd;
             if (camName.ToLower().Contains("yard"))
             {
-                cmd = "/c " + YardCam + " \"" + pathToSave + "\"";
+                if (IsWindows())
+                {
+                    cmd = "/c " + YardCam + " \"" + pathToSave + "\"";
+                }
+                else
+                {
+                    cmd = YardCam + " \"" + pathToSave + "\"";
+                }
             }
             else
             {
-                cmd = "/c " + OverviewCam + " \"" + pathToSave + "\"";
+                if (IsWindows())
+                {
+                    cmd = "/c " + OverviewCam + " \"" + pathToSave + "\"";
+                }
+                else
+                {
+                    cmd = OverviewCam + " \"" + pathToSave + "\"";
+                }
             }
-            //string cmd = "/c " + YardCam + "\"" + pathToSave + "\"";
             _logger.Debug($"Команда запроса - {cmd}");
             try
             {
                 Task<int> task = Task.Run(() =>
                 {
                     stoppingCtsToken.ThrowIfCancellationRequested();
+                    string fileName;
+                    string arguments;
+                    if (IsWindows())
+                    {
+                        fileName = "cmd";
+                        arguments = cmd;
+                    }
+                    else
+                    {
+                        var escapedArgs = cmd.Replace("\"", "\\\"");
+                        fileName = "/bin/bash";
+                        arguments = $"-c \"{escapedArgs}\"";
+                    }
+
                     ProcessStartInfo procStartInfo =
                         new ProcessStartInfo("cmd", cmd)
                         {
+                            FileName = fileName,
+                            Arguments = arguments,
                             RedirectStandardOutput = true,
                             UseShellExecute = false,
                             CreateNoWindow = true
@@ -162,24 +190,40 @@ namespace TG_Bot.BusinessLayer.Concrete
         }
 
         /// <summary>
+        /// Ключевая ОС
+        /// </summary>
+        /// <returns></returns>
+        private bool IsWindows()
+        {
+            return RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+        }
+
+        /// <summary>
         /// Проверка установленного ffmpeg
         /// </summary>
         private bool CheckFFmpegInstalled()
         {
+            string fileName = IsWindows() ? "cmd" : "/bin/bash";
+            string arguments = IsWindows() ? "/c " + "ffmpeg -version" : "-c ffmpeg -version";
             ProcessStartInfo procStartInfo =
-                new System.Diagnostics.ProcessStartInfo("cmd", "/c " + "ffmpeg -version")
+                new ProcessStartInfo()
                 {
+                    FileName = fileName,
+                    Arguments = arguments,
                     RedirectStandardOutput = true,
                     UseShellExecute = false,
                     CreateNoWindow = true
                 };
 
-            Process proc = new System.Diagnostics.Process
+            Process proc = new Process
             {
                 StartInfo = procStartInfo
             };
             proc.Start();
-            string result = new string(proc.StandardOutput.ReadLine()?.Take(21).ToArray());
+            proc.WaitForExit();
+            var output = proc.StandardOutput.ReadLine();
+
+            string result = new string(output?.Take(21).ToArray());
 
             if (!string.IsNullOrEmpty(result) && result.Contains("ffmpeg version"))
             {

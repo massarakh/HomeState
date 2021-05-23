@@ -4,9 +4,9 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <ApplicationIcon>home_house_3526.ico</ApplicationIcon>
-    <AssemblyVersion>1.1.4.15</AssemblyVersion>
-    <FileVersion>1.1.4.15</FileVersion>
-    <Version>1.1.4.15</Version>
+    <AssemblyVersion>1.1.5.23</AssemblyVersion>
+    <FileVersion>1.1.5.23</FileVersion>
+    <Version>1.1.5.23</Version>
     <Authors>Nikita Bukharenko</Authors>
     <NeutralLanguage>ru</NeutralLanguage>
     <Copyright>Никита Бухаренко</Copyright>
