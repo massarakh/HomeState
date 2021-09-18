@@ -10,12 +10,13 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using NLog;
 using TG_Bot.BusinessLayer.Abstract;
+using TG_Bot.Helpers;
 
 namespace TG_Bot.BusinessLayer.Concrete
 {
     public class CamService : ICamService
     {
-
+        private readonly BotHelper _botHelper;
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
         private IConfiguration _configuration { get; }
 
@@ -75,6 +76,7 @@ namespace TG_Bot.BusinessLayer.Concrete
         public CamService(IConfiguration configuration)
         {
             _configuration = configuration;
+            _botHelper = new BotHelper(configuration);
             if (!CheckFFmpegInstalled())
             {
                 _logger.Fatal($"Не найден ffpeg в системе");
@@ -117,7 +119,7 @@ namespace TG_Bot.BusinessLayer.Concrete
             string cmd;
             if (camName.ToLower().Contains("yard"))
             {
-                if (IsWindows())
+                if (_botHelper.IsWindows())
                 {
                     cmd = "/c " + YardCam + " \"" + pathToSave + "\"";
                 }
@@ -128,7 +130,7 @@ namespace TG_Bot.BusinessLayer.Concrete
             }
             else
             {
-                if (IsWindows())
+                if (_botHelper.IsWindows())
                 {
                     cmd = "/c " + OverviewCam + " \"" + pathToSave + "\"";
                 }
@@ -145,7 +147,7 @@ namespace TG_Bot.BusinessLayer.Concrete
                     stoppingCtsToken.ThrowIfCancellationRequested();
                     string fileName;
                     string arguments;
-                    if (IsWindows())
+                    if (_botHelper.IsWindows())
                     {
                         fileName = "cmd";
                         arguments = cmd;
@@ -189,22 +191,15 @@ namespace TG_Bot.BusinessLayer.Concrete
             }
         }
 
-        /// <summary>
-        /// Ключевая ОС
-        /// </summary>
-        /// <returns></returns>
-        private bool IsWindows()
-        {
-            return RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
-        }
+        
 
         /// <summary>
         /// Проверка установленного ffmpeg
         /// </summary>
         private bool CheckFFmpegInstalled()
-        {
-            string fileName = IsWindows() ? "cmd" : "/bin/bash";
-            string arguments = IsWindows() ? "/c " + "ffmpeg -version" : "-c ffmpeg -version";
+        { 
+            string fileName = _botHelper.IsWindows() ? "cmd" : "/bin/bash";
+            string arguments = _botHelper.IsWindows() ? "/c " + "ffmpeg -version" : "-c ffmpeg -version";
             ProcessStartInfo procStartInfo =
                 new ProcessStartInfo()
                 {
