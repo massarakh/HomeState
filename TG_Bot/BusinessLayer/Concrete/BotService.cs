@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Telegram.Bot;
@@ -28,17 +26,15 @@ namespace TG_Bot.BusinessLayer.Concrete
     {
         private readonly IStateService _stateService;
         private readonly ICamService _camService;
-        private readonly IConfiguration _configuration;
         private readonly IRestService _restService;
         private ITelegramBotClient _botClient;
-        private BotHelper _botHelper;
+        private readonly BotHelper _botHelper;
         private Task _executingTask;
         private readonly CancellationTokenSource _stoppingCts =
             new CancellationTokenSource();
         private CancellationToken Token => _stoppingCts.Token;
-        private Outputs _outputs = new Outputs();
+        private readonly Outputs _outputs = new Outputs();
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
-        private string _botToken = string.Empty;
 
         /// <summary>
         /// Основная клавиатура
@@ -166,60 +162,10 @@ namespace TG_Bot.BusinessLayer.Concrete
                 }
             });
 
-        /// <summary>
-        /// Получение токена телеграм бота
-        /// </summary>
-        private string BotToken
-        {
-            get
-            {
-                if (!string.IsNullOrEmpty(_botToken))
-                {
-                    return _botToken;
-                }
-                IEnumerable<IConfigurationSection> sections = _configuration.GetSection("BotConfiguration").GetChildren();
-                var tokenSection = sections.FirstOrDefault(_ => _.Key == "BotToken");
-                if (tokenSection == null)
-                {
-                    _logger.Error($"Не найден токен для бота, выход");
-                    return string.Empty;
-                }
-
-                switch (tokenSection.Value)
-                {
-                    case "<BotToken>":
-                        {
-                            string token = GetBotTokenFromFile();
-                            _botToken = token;
-                            return string.IsNullOrEmpty(token) ? string.Empty : token;
-                        }
-
-                    default:
-                        _botToken = tokenSection.Value;
-                        return _botToken;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Получение токена из файла
-        /// </summary>
-        /// <returns></returns>
-        private string GetBotTokenFromFile()
-        {
-            var path = Directory.GetParent(AppContext.BaseDirectory).FullName;
-            var PathToken = Path.Combine(path, "BotToken.txt");
-            if (!File.Exists(PathToken))
-                return null;
-
-            return File.ReadAllText(PathToken);
-        }
-
         public BotService(IStateService stateService, ICamService camService, IConfiguration configuration, IRestService restService)
         {
             _stateService = stateService;
             _camService = camService;
-            _configuration = configuration;
             _restService = restService;
             _botHelper = new BotHelper(configuration);
         }
@@ -300,6 +246,13 @@ namespace TG_Bot.BusinessLayer.Concrete
             if (message.Type != MessageType.Text)
                 return;
 
+            var action = (message.Text.Split(' ').First()) switch
+            {
+                "/start" => SendInlineKeyboard(message),
+                "/info" => SendInlineKeyboard(message),
+                _ => SendInlineKeyboard(message)
+            };
+
             //var action = (message.Text.Split(' ').First()) switch
             //{
             //    "/state" => SendInlineKeyboard(message),
@@ -309,7 +262,7 @@ namespace TG_Bot.BusinessLayer.Concrete
             //    //"/request" => RequestContactAndLocation(message),
             //    _ => Usage(message)
             //};
-            var action = SendInlineKeyboard(message);
+            //var action = SendInlineKeyboard(message);
             await action;
         }
 
@@ -319,13 +272,23 @@ namespace TG_Bot.BusinessLayer.Concrete
         {
             await _botClient.SendChatActionAsync(message.Chat.Id, ChatAction.Typing, Token);
             InlineKeyboardMarkup inlineKeyboard;
+            string text;
             switch (message.Text)
             {
                 case "/start":
+                    text = "Выберите запрос";
+                    inlineKeyboard = _keyboard;
+                    break;
+
+                case "/info":
+                    text = "Статус системы:\n";
+                    string result = _botHelper.GetSystemInfo();
+                    text += result;
                     inlineKeyboard = _keyboard;
                     break;
 
                 default:
+                    text = "Выберите запрос";
                     inlineKeyboard = _keyboard;
                     break;
             }
@@ -333,7 +296,7 @@ namespace TG_Bot.BusinessLayer.Concrete
 
             await _botClient.SendTextMessageAsync(
                 chatId: message.Chat.Id,
-                text: "Выберите запрос",
+                text: text,
                 replyMarkup: inlineKeyboard, cancellationToken: Token);
         }
 
@@ -928,8 +891,6 @@ namespace TG_Bot.BusinessLayer.Concrete
                 parseMode: ParseMode.Html);
         }
 
-
-
         #region Inline Mode
 
         private async Task BotOnInlineQueryReceived(InlineQuery inlineQuery)
@@ -985,14 +946,14 @@ namespace TG_Bot.BusinessLayer.Concrete
             {
                 _logger.Info($"Bot service stopping");
             }, true);
-
-            if (string.IsNullOrEmpty(BotToken))
+            string token = _botHelper.GetBotToken();
+            if (string.IsNullOrEmpty(token))
             {
                 _stoppingCts.Cancel();
             }
             else
             {
-                _botClient = new TelegramBotClient(BotToken);
+                _botClient = new TelegramBotClient(token);
             }
 
             // StartReceiving does not block the caller thread. Receiving is done on the ThreadPool.
