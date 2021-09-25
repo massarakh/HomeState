@@ -128,16 +128,17 @@ namespace TG_Bot.BusinessLayer.Concrete
             {
                 throw new Exception($"Невозможно получить состояние контроллера - {ex.Message}");
             }
-            return $"<pre>Нагрев конвекторов:       {model.Outputs[0].ToFormatted()}\n" +
-                    $"Бойлер:                   {model.Outputs[2].ToFormatted()}\n" +
-                    $"Тёплые полы (с/у):        {model.Outputs[3].ToFormatted()}\n" +
-                    $"Спальня молодёжи:         {model.Outputs[4].ToFormatted()}\n" +
-                    $"Кухня:                    {model.Outputs[5].ToFormatted()}\n" +
+            return $"<pre>" +
+                    $"Конвекторы:  {model.Outputs[0].ToFormatted()}\n" +
+                    $"Бойлер:      {model.Outputs[2].ToFormatted()}\n" +
+                    $"Полы (с/у):  {model.Outputs[3].ToFormatted()}\n" +
+                    $"Спальня №4:  {model.Outputs[4].ToFormatted()}\n" +
+                    $"Кухня:       {model.Outputs[5].ToFormatted()}\n" +
                     $"\nСостояние контроллера\n" +
-                    $"Напряжение:               {model.Power} V\n" +
-                    $"Температура:              {model.Temp} °С\n" +
-                    $"Баланс:                   {model.Balance} ₽\n" +
-                    $"Уровень заряда батареи:   {model.Battery.Charge}%</pre>";
+                    $"Напряжение:  {model.Power} V\n" +
+                    $"Температура: {model.Temp} °С\n" +
+                    $"Баланс:      {model.Balance} ₽\n" +
+                    $"Батарея:     {model.Battery.Charge}%</pre>";
         }
     }
 }

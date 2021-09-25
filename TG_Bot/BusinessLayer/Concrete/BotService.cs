@@ -133,8 +133,8 @@ namespace TG_Bot.BusinessLayer.Concrete
                 },
                 new[]
                 {
-                    InlineKeyboardButton.WithCallbackData("Конвекторы вкл.", "relay1_enable"),
-                    InlineKeyboardButton.WithCallbackData("Конвекторы выкл.", "relay1_disable"),
+                    InlineKeyboardButton.WithCallbackData("Конв. вкл.", "relay1_enable"),
+                    InlineKeyboardButton.WithCallbackData("Конв. выкл.", "relay1_disable"),
                 },
                 new []
                 {
@@ -143,13 +143,13 @@ namespace TG_Bot.BusinessLayer.Concrete
                 },
                 new []
                 {
-                    InlineKeyboardButton.WithCallbackData("Тёплые полы (с/у) вкл.", "output2_enable"),
-                    InlineKeyboardButton.WithCallbackData("Тёплые полы (с/у) выкл.", "output2_disable")
+                    InlineKeyboardButton.WithCallbackData("Полы (с/у) вкл.", "output2_enable"),
+                    InlineKeyboardButton.WithCallbackData("Полы (с/у) выкл.", "output2_disable")
                 },
                 new []
                 {
-                    InlineKeyboardButton.WithCallbackData("Спальня молод. вкл.", "output3_enable"),
-                    InlineKeyboardButton.WithCallbackData("Спальня молод. выкл.", "output3_disable")
+                    InlineKeyboardButton.WithCallbackData("Спал. №4 вкл.", "output3_enable"),
+                    InlineKeyboardButton.WithCallbackData("Спал. №4 выкл.", "output3_disable")
                 },
                 new []
                 {
@@ -205,7 +205,7 @@ namespace TG_Bot.BusinessLayer.Concrete
         /// <returns>Результат проверки</returns>
         private async Task<bool> Authenticate(CallbackQuery query)
         {
-            if (!_botHelper.IsAuthorized(query.From.Id))
+            if (!_botHelper.IsAuthorized(Convert.ToInt32(query.From.Id)))
             {
                 await _botClient.AnswerCallbackQueryAsync(
                     query.Id, cancellationToken: Token);
@@ -226,7 +226,7 @@ namespace TG_Bot.BusinessLayer.Concrete
         /// <returns>Результат проверки</returns>
         private async Task<bool> Authenticate(Message message)
         {
-            if (!_botHelper.IsAuthorized(message.From.Id))
+            if (!_botHelper.IsAuthorized(Convert.ToInt32(message.From.Id)))
             {
                 await _botClient.SendTextMessageAsync(
                     chatId: message.Chat.Id,
@@ -970,12 +970,14 @@ namespace TG_Bot.BusinessLayer.Concrete
                 _executingTask.Start();
                 _logger.Debug("Telegram bot initiated");
             }
+            catch (OperationCanceledException exception)
+            {
+                _logger.Debug($"Работа бота отменена");
+            }
             catch (Exception)
             {
                 _logger.Error($"Работа бота отменена, не найден токен бота");
             }
-            //TODO
-            //_stoppingCts.Token.ThrowIfCancellationRequested();
             await _executingTask;
         }
 
@@ -986,12 +988,11 @@ namespace TG_Bot.BusinessLayer.Concrete
             {
                 return;
             }
-            _stoppingCts.Cancel();
 
             try
             {
                 _logger.Debug($"Try to stop telegram bot receiving");
-                _botClient.StopReceiving();
+                _stoppingCts.Cancel();
             }
             catch (Exception ex)
             {
