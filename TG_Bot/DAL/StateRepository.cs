@@ -51,9 +51,11 @@ namespace TG_Bot.DAL
                     Barn = state.TemperatureBarn,
                     Bedroom = state.TemperatureBedroom,
                     LivingRoom = state.TemperatureLivingRoom,
-                    Outside = state.TemperatureOutside
+                    Outside = state.TemperatureOutside,
+                    BedroomYouth = state.BedroomYouth
                 },
-                Timestamp = state.Timestamp?.ToString("H':'mm d'.'MM'.'yy")
+                Timestamp = state.Timestamp?.ToString("H':'mm"),
+                Date = state.Timestamp?.ToString("d'.'MM'.'yy")
             };
         }
 

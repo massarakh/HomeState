@@ -43,7 +43,9 @@ namespace TG_Bot.monitoring
             base.OnConfiguring(optionsBuilder);
             if (!optionsBuilder.IsConfigured)
             {
-                optionsBuilder.UseMySql(Configuration.GetConnectionString("DefaultConnection"));
+                string connectionString = Configuration.GetConnectionString("DefaultConnection");
+                ServerVersion version = ServerVersion.AutoDetect(connectionString);
+                optionsBuilder.UseMySql(connectionString, version);
                 //optionsBuilder.UseMySql(Configuration.GetConnectionString("DefaultConnection"));
             }
         }
@@ -61,7 +63,7 @@ namespace TG_Bot.monitoring
                     .HasColumnType("varchar(20)")
                     .HasDefaultValueSql("''")
                     .HasCharSet("utf8")
-                    .HasCollation("utf8_general_ci");
+                    .UseCollation("utf8_general_ci");
 
                 entity.Property(e => e.Phase1)
                     .HasColumnType("float(9,3)")
@@ -83,7 +85,7 @@ namespace TG_Bot.monitoring
                     .HasColumnType("float(9,3)")
                     .HasDefaultValueSql("'0.000'");
 
-                entity.Property(e => e.D14)
+                entity.Property(e => e.BedroomYouth)
                     .HasColumnType("float(9,3)")
                     .HasDefaultValueSql("'0.000'");
 

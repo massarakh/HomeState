@@ -68,7 +68,8 @@ namespace TG_Bot
                     var connectionString = context.Configuration.GetConnectionString("DefaultConnection");
                     services.AddDbContext<_4stasContext>(options =>
                     {
-                        options.UseMySql(connectionString);
+                        ServerVersion version = ServerVersion.AutoDetect(connectionString);
+                        options.UseMySql(connectionString,version);
                     });
                     var container = new Container();
                     container.Configure(config =>

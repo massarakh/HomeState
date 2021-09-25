@@ -14,5 +14,6 @@ namespace TG_Bot.BusinessLayer
        public bool Boiler;
        public bool BoilerHeat;
        public string Energy;
+       public string Date;
    }
 }

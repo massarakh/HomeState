@@ -101,6 +101,10 @@ namespace TG_Bot.monitoring
         [NotMapped]
         public bool BoilerHeating { get; set; }
 
-        public float? D14 { get; set; }
+        /// <summary>
+        /// Спальня молодёжи
+        /// </summary>
+        [Column("D14")]
+        public float? BedroomYouth { get; set; }
     }
 }

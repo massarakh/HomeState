@@ -10,5 +10,6 @@ namespace TG_Bot.BusinessLayer
         public float? LivingRoom;
         public float? Outside;
         public float? Barn;
+        public float? BedroomYouth;
     }
 }

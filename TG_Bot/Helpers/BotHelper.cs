@@ -103,20 +103,42 @@ namespace TG_Bot.Helpers
         /// <returns></returns>
         public string GetSystemInfo()
         {
-            var assembly = Assembly.GetExecutingAssembly();
-            string version = assembly.GetName().Version.ToString();
-            string filePath = assembly.Location;
-            DateTime dt = new FileInfo(filePath).LastWriteTime;
-            string uptime = GetUptimeValue();
-            string result = $"Версия бота: {version}\n" +
-                            $"Дата сборки: {dt:d'.'MM'.'yy}\n";
-            if (!string.IsNullOrEmpty(uptime))
+            try
             {
-                string uptimeString = $"Время работы: {uptime}";
-                return result + uptimeString;
-            }
+                string result = string.Empty;
+                var assembly = Assembly.GetExecutingAssembly();
+                var attribute = assembly.GetCustomAttributes(typeof(AssemblyDescriptionAttribute), false)[0] as AssemblyDescriptionAttribute;
+                string description = attribute?.Description;
 
-            return result;
+                if (!string.IsNullOrEmpty(description))
+                {
+                    result += description+"\n";
+                }
+
+                result += $"Время работы: {GetUptimeValue()}";
+
+                //_logger.Info($"Сборка {assembly?.FullName}");
+                //string version = assembly?.GetName().Version.ToString();
+                //_logger.Info($"Версия сборки");
+                //string filePath = assembly?.Location;
+                //_logger.Info($"Местоположение сборки {filePath}");
+                //DateTime dt = new FileInfo(filePath).LastWriteTime;
+                //string uptime = GetUptimeValue();
+                //string result = $"Версия бота: {version}\n" +
+                //                $"Дата сборки: {dt:d'.'MM'.'yy}\n";
+                //if (!string.IsNullOrEmpty(uptime))
+                //{
+                //    string uptimeString = $"Время работы: {uptime}";
+                //    return result + uptimeString;
+                //}
+                //return result;
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"Ошибка запроса, {ex.Message}");
+                return "Ошибка запроса системной информации";
+            }
         }
 
         /// <summary>

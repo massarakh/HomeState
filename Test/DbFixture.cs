@@ -26,7 +26,12 @@ namespace Test
 
             var serviceCollection = new ServiceCollection();
             serviceCollection
-                .AddDbContext<_4stasContext>(options => options.UseMySql(configuration.GetConnectionString("DefaultConnection")),
+                .AddDbContext<_4stasContext>(options =>
+                    {
+                        string connectionString = configuration.GetConnectionString("DefaultConnection");
+                        ServerVersion version = ServerVersion.AutoDetect(connectionString);
+                        options.UseMySql(connectionString, version);
+                    },
                     ServiceLifetime.Transient);
 
             ServiceProvider = serviceCollection.BuildServiceProvider();
