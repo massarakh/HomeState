@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
-using NeoSmart.Unicode;
 
 namespace TG_Bot.monitoring
 {

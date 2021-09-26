@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.Configuration;
 
 namespace TG_Bot.monitoring
@@ -14,10 +13,6 @@ namespace TG_Bot.monitoring
         {
             get
             {
-                //var scope = serviceProvider.CreateScope();
-                //var scopedProvider = scope.ServiceProvider;
-                //var config = scopedProvider.GetRequiredService<IConfiguration>();
-
                 return _configuration ??= new ConfigurationBuilder()
                     .SetBasePath(Directory.GetParent(AppContext.BaseDirectory).FullName)
                     .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
@@ -38,6 +33,8 @@ namespace TG_Bot.monitoring
 
         public virtual DbSet<Monitor> Monitor { get; set; }
 
+        public virtual DbSet<Ccu> CCU { get; set; }
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             base.OnConfiguring(optionsBuilder);
@@ -46,7 +43,6 @@ namespace TG_Bot.monitoring
                 string connectionString = Configuration.GetConnectionString("DefaultConnection");
                 ServerVersion version = ServerVersion.AutoDetect(connectionString);
                 optionsBuilder.UseMySql(connectionString, version);
-                //optionsBuilder.UseMySql(Configuration.GetConnectionString("DefaultConnection"));
             }
         }
 
@@ -125,6 +121,93 @@ namespace TG_Bot.monitoring
                     .HasColumnName("date_time")
                     .HasColumnType("datetime")
                     .HasDefaultValueSql("'0000-00-00 00:00:00'");
+            });
+
+            modelBuilder.Entity<Ccu>(entity =>
+            {
+                entity.ToTable("ccu");
+
+                entity.Property(e => e.Id).HasColumnType("int(11)");
+
+                entity.Property(e => e.BattState)
+                    .IsRequired()
+                    .HasMaxLength(16);
+
+                entity.Property(e => e.ClientIp)
+                    .HasMaxLength(20)
+                    .HasColumnName("client_ip")
+                    .HasDefaultValueSql("''");
+
+                entity.Property(e => e.DateTime)
+                    .HasColumnType("datetime")
+                    .HasColumnName("date_time")
+                    .HasDefaultValueSql("'0000-00-00 00:00:00'");
+
+                entity.Property(e => e.DcPower).HasColumnName("DC_Power");
+
+                entity.Property(e => e.In1)
+                    .HasColumnType("float(9,2)")
+                    .HasDefaultValueSql("'0.00'");
+
+                entity.Property(e => e.In2)
+                    .HasColumnType("float(9,2)")
+                    .HasDefaultValueSql("'0.00'");
+
+                entity.Property(e => e.In3)
+                    .HasColumnType("float(9,2)")
+                    .HasDefaultValueSql("'0.00'");
+
+                entity.Property(e => e.In4)
+                    .HasColumnType("float(9,2)")
+                    .HasDefaultValueSql("'0.00'");
+
+                entity.Property(e => e.In5)
+                    .HasColumnType("float(9,2)")
+                    .HasDefaultValueSql("'0.00'");
+
+                entity.Property(e => e.In6)
+                    .HasColumnType("float(9,2)")
+                    .HasDefaultValueSql("'0.00'");
+
+                entity.Property(e => e.In7)
+                    .HasColumnType("float(9,2)")
+                    .HasDefaultValueSql("'0.00'");
+
+                entity.Property(e => e.In8)
+                    .HasColumnType("float(9,2)")
+                    .HasDefaultValueSql("'0.00'");
+
+                entity.Property(e => e.Mode)
+                    .IsRequired()
+                    .HasMaxLength(16);
+
+                entity.Property(e => e.Boiler)
+                    .HasColumnType("float(9,2)")
+                    .HasDefaultValueSql("'0.00'");
+
+                entity.Property(e => e.WarmFloorsBath)
+                    .HasColumnType("float(9,2)")
+                    .HasDefaultValueSql("'0.00'");
+
+                entity.Property(e => e.BedroomYouth)
+                    .HasColumnType("float(9,2)")
+                    .HasDefaultValueSql("'0.00'");
+
+                entity.Property(e => e.WarmFloorKitchen)
+                    .HasColumnType("float(9,2)")
+                    .HasDefaultValueSql("'0.00'");
+
+                entity.Property(e => e.O5)
+                    .HasColumnType("float(9,2)")
+                    .HasDefaultValueSql("'0.00'");
+
+                entity.Property(e => e.R1)
+                    .HasColumnType("float(9,2)")
+                    .HasDefaultValueSql("'0.00'");
+
+                entity.Property(e => e.R2)
+                    .HasColumnType("float(9,2)")
+                    .HasDefaultValueSql("'0.00'");
             });
 
             OnModelCreatingPartial(modelBuilder);

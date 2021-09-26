@@ -15,5 +15,9 @@ namespace TG_Bot.BusinessLayer
        public bool BoilerHeat;
        public string Energy;
        public string Date;
+
+       // Получается из CCU таблицы
+       public bool BedroomYouth;
+       public bool WarmFloorKitchen;
    }
 }
