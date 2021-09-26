@@ -60,8 +60,10 @@ namespace TG_Bot.BusinessLayer.Concrete
                    $"Энергия:     {state.Energy} кВт⋅ч\n" +
                    $"====================\n" +
                    $"Бойлер:      {state.Boiler.ToFormatted()}\n" +
-                   $"Тёплые полы: {state.Heat.Floor.ToFormatted()}\n" +
+                   $"Полы (с/у):  {state.Heat.Floor.ToFormatted()}\n" +
                    $"Батареи:     {state.Heat.Batteries.ToFormatted()}\n" +
+                   $"Спальня №4:  {state.BedroomYouth.ToFormatted()}\n" +
+                   $"Кухня, полы: {state.WarmFloorKitchen.ToFormatted()}\n" +
                    $"====================\n" +
                    $"Гостиная:    {state.Temperature.LivingRoom} °С | {state.Humidity.LivingRoom} %\n" +
                    $"Спальня №2:  {state.Temperature.Bedroom} °С | {state.Humidity.Bedroom} %\n" +
@@ -107,8 +109,10 @@ namespace TG_Bot.BusinessLayer.Concrete
             var state = await _repository.GetState();
             return $"<pre>" +
                    $"Бойлер:      {state.Boiler.ToFormatted()}\n" +
-                   $"Тёплые полы: {state.Heat.Floor.ToFormatted()}\n" +
-                   $"Батареи:     {state.Heat.Batteries.ToFormatted()}</pre>\n";
+                   $"Полы (с/у):  {state.Heat.Floor.ToFormatted()}\n" +
+                   $"Батареи:     {state.Heat.Batteries.ToFormatted()}\n" +
+                   $"Спальня №4:  {state.BedroomYouth.ToFormatted()}\n" +
+                   $"Кухня, полы: {state.WarmFloorKitchen.ToFormatted()}</pre>\n";
         }
 
         public async Task<string> GetStatistics(StatType type)

@@ -24,6 +24,10 @@ namespace TG_Bot.DAL
                 .OrderByDescending(d => d.Timestamp)
                 .FirstOrDefaultAsync();
 
+            var ccuState = await _context.CCU
+                .OrderByDescending(d => d.DateTime)
+                .FirstOrDefaultAsync();
+
             return new Data
             {
                 Boiler = Convert.ToInt32(state.Boiler) == 10,
@@ -55,7 +59,9 @@ namespace TG_Bot.DAL
                     BedroomYouth = state.BedroomYouth
                 },
                 Timestamp = state.Timestamp?.ToString("H':'mm"),
-                Date = state.Timestamp?.ToString("d'.'MM'.'yy")
+                Date = state.Timestamp?.ToString("d'.'MM'.'yy"),
+                BedroomYouth = Convert.ToInt32(ccuState.BedroomYouth) == 1,
+                WarmFloorKitchen = Convert.ToInt32(ccuState.WarmFloorKitchen) == 1,
             };
         }
 
