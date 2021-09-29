@@ -5,7 +5,12 @@ VisualStudioVersion = 16.0.30717.126
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TG_Bot", "TG_Bot\TG_Bot.csproj", "{0D797C54-2450-4A33-8ABC-99DD390FF04E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test", "Test\Test.csproj", "{39FDA0F6-BAD3-4D6E-A1F4-4BCAA7A0B7AC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test", "Test\Test.csproj", "{39FDA0F6-BAD3-4D6E-A1F4-4BCAA7A0B7AC}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{C99BFCED-E17E-41D7-A88E-96CEB46397DC}"
+	ProjectSection(SolutionItems) = preProject
+		..\..\..\Desktop\tg_bot.gif = ..\..\..\Desktop\tg_bot.gif
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
