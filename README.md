@@ -7,5 +7,4 @@ Supported functions:
 3. Ability to control water heater, heat radiators, warm floors.
 4. Collecting statisctics from sensors.
 
-Inline-style: 
 ![alt text](https://github.com/massarakh/HomeState/blob/main/tg_bot.gif "Sample")
