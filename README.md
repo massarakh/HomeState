@@ -6,3 +6,6 @@ Supported functions:
 2. Gathering images from several IP cameras.
 3. Ability to control water heater, heat radiators, warm floors.
 4. Collecting statisctics from sensors.
+
+Inline-style: 
+![alt text](https://github.com/massarakh/HomeState/blob/main/tg_bot.gif "Sample")
