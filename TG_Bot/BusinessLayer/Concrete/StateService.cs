@@ -19,8 +19,8 @@ namespace TG_Bot.BusinessLayer.Concrete
     {
         private readonly IStateRepository _repository;
         private readonly IConfiguration _configuration;
-        private decimal _priceDay;
-        private decimal _priceNight;
+        private double _priceDay;
+        private double _priceNight;
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
         public StateService(IStateRepository repository, IConfiguration configuration)
@@ -30,12 +30,12 @@ namespace TG_Bot.BusinessLayer.Concrete
             (_priceDay, _priceNight) = GetPrices();
         }
 
-        private (decimal _priceDay, decimal _priceNight) GetPrices()
+        private (double _priceDay, double _priceNight) GetPrices()
         {
             IEnumerable<IConfigurationSection> sections = _configuration.GetSection("ElectricityPrices").GetChildren();
             var configurationSections = sections as IConfigurationSection[] ?? sections.ToArray();
-            var day = Convert.ToDecimal(configurationSections.First(_ => _.Key == "Day").Value);
-            var night = Convert.ToDecimal(configurationSections.First(_ => _.Key == "Night").Value);
+            var day = Convert.ToDouble(configurationSections.First(_ => _.Key == "Day").Value);
+            var night = Convert.ToDouble(configurationSections.First(_ => _.Key == "Night").Value);
             if (day == 0 || night == 0)
             {
                 _logger.Warn($"Не найдены тарифы на электричество");
@@ -123,20 +123,23 @@ namespace TG_Bot.BusinessLayer.Concrete
             switch (type)
             {
                 case StatType.Day:
-                    start = DateTime.Now.Date;
-                    end = DateTime.Now.Date.AddDays(1).AddTicks(-1);
+                    //start = DateTime.Now.Date;
+                    //end = DateTime.Now.Date.AddDays(1).AddTicks(-1);
+
+                    start = DateTime.Now.AddHours(-24).AddTicks(-1);
+                    end = DateTime.Now;
 
                     //start = DateTime.Now.Date.AddDays(-1);
                     //end = start.AddDays(1).AddTicks(-1);
 
-                    result = "<pre>Сегодня (Мин/Макс): " +
+                    result = "<pre>За 24 часа (Мин/Макс): " +
                              "\n{0}°С / {1}°С</pre>";
 
                     break;
 
                 case StatType.Weekend:
                     start = DateTime.Now.StartOfWeek(DayOfWeek.Saturday);
-                    end = DateTime.Now.StartOfWeek(DayOfWeek.Sunday).AddDays(1).AddTicks(-1);
+                    end = start.AddDays(1).AddTicks(-1);
                     result = "<pre>Выходные " + start.Date.ToString("d'.'MM") + "-" + end.Date.ToString("d'.'MM") + " (Мин/Макс): " +
                              "\n{0}°С / {1}°С </pre>";
                     break;
@@ -174,15 +177,19 @@ namespace TG_Bot.BusinessLayer.Concrete
                 default:
                     return string.Empty;
             }
-            var records = await _repository.Query().Where(_ => _.Timestamp >= start && _.Timestamp <= end).ToListAsync();
+            var records = await _repository
+                .Query()
+                .Where(_ => _.Timestamp >= start && _.Timestamp <= end)
+                .OrderByDescending(x => x.TemperatureOutside)
+                .ToListAsync();
             if (!records.Any())
             {
                 return "Невозможно получить результаты, нет записей";
             }
 
-            var sortedRecords = records.OrderByDescending(x => x.TemperatureOutside).ToList();
-            var maxTemp = sortedRecords.First();
-            var minTemp = sortedRecords.Last();
+            //var sortedRecords = records.OrderByDescending(x => x.TemperatureOutside).ToList();
+            var maxTemp = records.First();
+            var minTemp = records.Last();
 
             string retValue = string.Format(result, minTemp.TemperatureOutside,
                 maxTemp.TemperatureOutside,
@@ -199,89 +206,64 @@ namespace TG_Bot.BusinessLayer.Concrete
                 case StatType.Day:
                     try
                     {
-                        start = DateTime.Now.AddHours(-24).AddTicks(-1);
-                        end = DateTime.Now;
-                        list = await GetElectricityValues(start, end);
+                        list = GetElectricityValues(records);
 
                         sb = new StringBuilder();
-                        sb.Append($"\nДень | Час | кВт⋅ч | ₽");
+                        sb.Append($"\n{"День",-6}|{"Час",-3}|{"кВт*ч",-5}|₽");
                         foreach (var rec in list)
                         {
-                            var dt = DateTime.Parse(rec.Date).ToString("dd'.'MM");
+                            var dt = rec.Date.ToString("dd'.'MM");
                             var hour = rec.Hour?.ToString().Length == 1
                                 ? "0" + rec.Hour.Value
                                 : rec.Hour?.ToString();
-                            sb.Append("\n" + dt + "| " + hour + "  | " + rec.Average.ToString("0.00") + " |" + rec.Price.ToString("0.00"));
+                            var average = rec.Average.ToString("0.00");
+                            var price = rec.Price.ToString("0.00");
+
+                            sb.Append($"\n{dt,-6}|{hour,-3}|{average,-5}|{price}");
                         }
 
                         electricity += sb.ToString();
-
-                        //List<DayValue> tmp = list.FindAll(_ => DateTime.Parse(_.Date) == DateTime.Today)
-                        //    .GroupBy(r => new { dt = r.Date })
-                        //    .Select(rc => new DayValue
-                        //    {
-                        //        Date = rc.Key.dt,
-                        //        AverageDay = rc.Sum(_ => _.Average),
-                        //        Summ = rc.Sum(_ => _.Price)
-                        //    }).ToList();
-
-                        //sb.Append("\nВсего за день:");
-                        //sb.Append($"\nкВт⋅ч | ₽");
-                        //var d = DateTime.Parse().ToString("dd'.'MM");
-                        //sb.Append("\n" + d + " | " + last.AverageDay.ToString("0.00") + " |" + last.Summ.ToString("0.00"));
                     }
                     catch (Exception ex)
                     {
                         _logger.Error($"Ошибка вычисления показаний электричества - {ex.Message}");
                         return "Ошибка вычисления показаний электричества";
                     }
-
-
                     break;
 
                 case StatType.Weekend:
+                case StatType.Week:
+                case StatType.Month:
                     try
                     {
                         sb = new StringBuilder();
-                        sb.Append($"\nДень  | кВт⋅ч | ₽");
-
-                        //прошлые выходные
-                        start = DateTime.Now.AddDays(-7).StartOfWeek(DayOfWeek.Saturday);
-                        end = DateTime.Now.AddDays(-7).StartOfWeek(DayOfWeek.Sunday).AddDays(1).AddTicks(-1);
-                        list = await GetElectricityValues(start, end);
+                        sb.Append($"\n{"День",-6}|{"кВт*ч",-7}|₽");
+                        list = GetElectricityValues(records);
 
                         var daySum = list.GroupBy(r => new { dt = r.Date })
                             .Select(rc => new
                             {
                                 Date = rc.Key.dt,
-                                AverageDay = rc.Sum(_ => _.Average),
-                                Summ = rc.Sum(_ => _.Price)
+                                AverageDay = rc.Sum(_ => _.Average).ToString("0.00"),
+                                Summ = rc.Sum(_ => _.Price).ToString("0.00")
                             });
 
                         foreach (var v in daySum)
                         {
-                            var dt = DateTime.Parse(v.Date).ToString("dd'.'MM");
-                            sb.Append("\n" + dt + " | " + v.AverageDay.ToString("0.00") + " |" + v.Summ.ToString("0.00"));
+                            var dt = v.Date.ToString("dd'.'MM");
+                            if (v.Date.DayOfWeek == DayOfWeek.Saturday || v.Date.DayOfWeek == DayOfWeek.Sunday)
+                            {
+                                sb.Append("\n");
+                                sb.Append("<b>");
+                                sb.Append($"{dt,-6}|{v.AverageDay,-7}|{v.Summ}");
+                                sb.Append("</b>");
+                            }
+                            else
+                            {
+                                sb.Append($"\n{dt,-6}|{v.AverageDay,-7}|{v.Summ}");
+                            }
                         }
 
-                        //последние выходные
-                        start = DateTime.Now.StartOfWeek(DayOfWeek.Saturday);
-                        end = DateTime.Now.StartOfWeek(DayOfWeek.Sunday).AddDays(1).AddTicks(-1);
-                        list = await GetElectricityValues(start, end);
-
-                        daySum = list.GroupBy(r => new { dt = r.Date })
-                             .Select(rc => new
-                             {
-                                 Date = rc.Key.dt,
-                                 AverageDay = rc.Sum(_ => _.Average),
-                                 Summ = rc.Sum(_ => _.Price)
-                             });
-
-                        foreach (var v in daySum)
-                        {
-                            var dt = DateTime.Parse(v.Date).ToString("dd'.'MM");
-                            sb.Append("\n" + dt + " | " + v.AverageDay.ToString("0.00") + " |" + v.Summ.ToString("0.00"));
-                        }
                         electricity += sb.ToString();
                     }
                     catch (Exception ex)
@@ -292,53 +274,70 @@ namespace TG_Bot.BusinessLayer.Concrete
 
                     break;
 
-                case StatType.Month:
+                case StatType.Season:
+                    try
+                    {
+                        sb = new StringBuilder();
+                        sb.Append($"\n{"Месяц",-7}|{"кВт*ч",-7}|₽");
 
+                        //TODO надо написать подсчёт для месяцев
+                        list = GetElectricityValues(records);
+
+                        var monthSum = list.GroupBy(r => new { dt = r.Date.Month })
+                            .Select(rc => new
+                            {
+                                Date = rc.Key.dt,
+                                AverageDay = rc.Sum(_ => _.Average).ToString("0.00"),
+                                Summ = rc.Sum(_ => _.Price).ToString("0.00")
+                            });
+
+                        foreach (var v in monthSum)
+                        {
+                            var dt = v.Date.ToString("dd'.'MM");
+                            sb.Append($"\n{dt,-6}|{v.AverageDay,-7}|{v.Summ}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error($"Ошибка вычисления показаний электричества - {ex.Message}");
+                        return "Ошибка вычисления показаний электричества";
+                    }
                     break;
             }
 
             return retValue + electricity + "</pre>";
         }
 
-        private async Task<List<ElectricityValues>> GetElectricityValues(DateTime start, DateTime end)
+        private List<ElectricityValues> GetElectricityValues(List<Monitor> records)
         {
-            var records = await _repository.Query().Where(_ => _.Timestamp >= start
-                                                                && _.Timestamp <= end).ToListAsync();
             var list = records
                 .Where(rec => rec.Timestamp != null)
                 .AsEnumerable()
                 .GroupBy(rec => new { hour = rec.Timestamp?.Hour, date = rec.Timestamp?.ToShortDateString() })
                 .Select(av => new
                 {
-                    Average = Convert.ToDecimal(av.Average(a => a.Energy)),
+                    Average = Convert.ToDouble(av.Average(a => a.Energy)),
                     Hour = av.Key.hour,
                     Date = av.Key.date
                 })
                 .Select(av => new ElectricityValues
                 {
-                    Average = av.Average,//.ToString("0.00"),
+                    Average = Math.Round(av.Average, 2, MidpointRounding.AwayFromZero),
                     Hour = av.Hour,
-                    Date = av.Date,
-                    Price = (av.Hour.Value > 7 && av.Hour.Value < 23
+                    Date = Convert.ToDateTime(av.Date),
+                    Price = Math.Round(av.Hour.Value > 7 && av.Hour.Value < 23
                         ? av.Average * _priceDay
-                        : av.Average * _priceNight)//.ToString("0.00")
-                });
+                        : av.Average * _priceNight, 2, MidpointRounding.AwayFromZero),
+                }).OrderBy(x => x.Date).ThenBy(x => x.Hour);
             return list.ToList();
         }
 
-        public class ElectricityValues
+        private class ElectricityValues
         {
-            public decimal Average;
+            public double Average;
             public int? Hour;
-            public string Date;
-            public decimal Price;
-        }
-
-        public class DayValue
-        {
-            public string Date;
-            public decimal AverageDay;
-            public decimal Summ;
+            public DateTime Date;
+            public double Price;
         }
 
     }
