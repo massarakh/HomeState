@@ -19,14 +19,16 @@ namespace TG_Bot.BusinessLayer.Concrete
     {
         private readonly IStateRepository _repository;
         private readonly IConfiguration _configuration;
+        private readonly IRestService _restService;
         private double _priceDay;
         private double _priceNight;
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
-        public StateService(IStateRepository repository, IConfiguration configuration)
+        public StateService(IStateRepository repository, IConfiguration configuration, IRestService restService)
         {
             _repository = repository;
             _configuration = configuration;
+            _restService = restService;
             (_priceDay, _priceNight) = GetPrices();
         }
 
@@ -47,6 +49,8 @@ namespace TG_Bot.BusinessLayer.Concrete
         public async Task<string> LastState()
         {
             var state = await _repository.GetState();
+            var controllerState = _restService.CheckConnectivity();
+
             //return $"<pre>" +
             //       $"</pre>";
 
@@ -64,6 +68,7 @@ namespace TG_Bot.BusinessLayer.Concrete
                    $"Батареи:     {state.Heat.Batteries.ToFormatted()}\n" +
                    $"Спальня №4:  {state.BedroomYouth.ToFormatted()}\n" +
                    $"Кухня, полы: {state.WarmFloorKitchen.ToFormatted()}\n" +
+                   $"Контроллер:  {controllerState.ToFormatted()}\n" +
                    $"====================\n" +
                    $"Гостиная:    {state.Temperature.LivingRoom} °С | {state.Humidity.LivingRoom} %\n" +
                    $"Спальня №2:  {state.Temperature.Bedroom} °С | {state.Humidity.Bedroom} %\n" +
@@ -123,14 +128,9 @@ namespace TG_Bot.BusinessLayer.Concrete
             switch (type)
             {
                 case StatType.Day:
-                    //start = DateTime.Now.Date;
-                    //end = DateTime.Now.Date.AddDays(1).AddTicks(-1);
 
                     start = DateTime.Now.AddHours(-24).AddTicks(-1);
                     end = DateTime.Now;
-
-                    //start = DateTime.Now.Date.AddDays(-1);
-                    //end = start.AddDays(1).AddTicks(-1);
 
                     result = "<pre>За 24 часа (Мин/Макс): " +
                              "\n{0}°С / {1}°С</pre>";
@@ -200,6 +200,7 @@ namespace TG_Bot.BusinessLayer.Concrete
             StringBuilder sb;
             var electricity = "<pre>" +
                                  "\nЭлектричество:";
+
             //Вычисление электричества
             switch (type)
             {
@@ -218,7 +219,6 @@ namespace TG_Bot.BusinessLayer.Concrete
                                 : rec.Hour?.ToString();
                             var average = rec.Average.ToString("0.00");
                             var price = rec.Price.ToString("0.00");
-
                             sb.Append($"\n{dt,-6}|{hour,-3}|{average,-5}|{price}");
                         }
 
@@ -253,10 +253,7 @@ namespace TG_Bot.BusinessLayer.Concrete
                             var dt = v.Date.ToString("dd'.'MM");
                             if (v.Date.DayOfWeek == DayOfWeek.Saturday || v.Date.DayOfWeek == DayOfWeek.Sunday)
                             {
-                                sb.Append("\n");
-                                sb.Append("<b>");
-                                sb.Append($"{dt,-6}|{v.AverageDay,-7}|{v.Summ}");
-                                sb.Append("</b>");
+                                sb.Append($"\n{dt,-6}|{v.AverageDay,-7}|{v.Summ}");
                             }
                             else
                             {

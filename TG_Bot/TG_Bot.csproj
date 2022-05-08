@@ -4,16 +4,20 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net6.0</TargetFramework>
     <ApplicationIcon>home_house_3526.ico</ApplicationIcon>
-    <AssemblyVersion>1.1.9.26</AssemblyVersion>
-    <FileVersion>1.1.9.26</FileVersion>
-    <Version>1.2.2.22</Version>
+    <AssemblyVersion>1.2.2.26</AssemblyVersion>
+    <FileVersion>1.2.2.26</FileVersion>
+    <Version>1.2.5.8</Version>
     <Authors>Nikita Bukharenko</Authors>
     <NeutralLanguage>ru</NeutralLanguage>
     <Copyright>Никита Бухаренко</Copyright>
     <LangVersion>8</LangVersion>
-    <Description>Сборка от 26.02.2022
-Версия 1.2.2.26
+    <Description>Сборка от 08.05.2022
+Версия 1.2.5.8
+Changelog:
+- Добавлен статус контроллера
 
+Сборка от 26.02.2022
+Версия 1.2.2.26
 Changelog:
 - Исправлена работа с камерами
 - Ускорено получение параметров системы
