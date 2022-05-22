@@ -63,13 +63,13 @@ namespace TG_Bot
                     services.AddScoped<IStateService, StateService>();
                     services.AddScoped<IBotService, BotService>();
                     services.AddScoped<IRestService, RestService>();
-                    //services.AddSingleton(configuration);
                     services.AddHostedService<BotService>();
                     var connectionString = context.Configuration.GetConnectionString("DefaultConnection");
+                    //services.AddTransient<IStateRepository, StateRepository>(provider=> new StateRepository(context.Configuration.GetConnectionString("DefaultConnection")));
                     services.AddDbContext<_4stasContext>(options =>
                     {
                         ServerVersion version = ServerVersion.AutoDetect(connectionString);
-                        options.UseMySql(connectionString,version);
+                        options.UseMySql(connectionString, version);
                     });
                     var container = new Container();
                     container.Configure(config =>

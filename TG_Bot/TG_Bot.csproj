@@ -2,17 +2,29 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <ApplicationIcon>home_house_3526.ico</ApplicationIcon>
-    <AssemblyVersion>1.1.9.26</AssemblyVersion>
-    <FileVersion>1.1.9.26</FileVersion>
-    <Version>1.1.9.26</Version>
+    <AssemblyVersion>1.2.2.26</AssemblyVersion>
+    <FileVersion>1.2.2.26</FileVersion>
+    <Version>1.2.5.8</Version>
     <Authors>Nikita Bukharenko</Authors>
     <NeutralLanguage>ru</NeutralLanguage>
     <Copyright>Никита Бухаренко</Copyright>
     <LangVersion>8</LangVersion>
-    <Description>Сборка от 26.09.2021
-Версия 1.1.9.26</Description>
+    <Description>Сборка от 08.05.2022
+Версия 1.2.5.8
+Changelog:
+- Добавлен статус контроллера
+
+Сборка от 26.02.2022
+Версия 1.2.2.26
+Changelog:
+- Исправлена работа с камерами
+- Ускорено получение параметров системы
+- Добавлено включение/выключение всех выходов
+- Добавлены emoji для наглядности статуса
+- Исправлен подсчёт электричества
+- Ускорен подсчёт</Description>
     <PackageProjectUrl></PackageProjectUrl>
     <RepositoryUrl>https://github.com/massarakh/HomeState</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
@@ -20,6 +32,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Dapper" Version="2.0.123" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="5.0.10" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="5.0.10">
       <PrivateAssets>all</PrivateAssets>

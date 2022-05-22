@@ -33,7 +33,7 @@ namespace TG_Bot.BusinessLayer.Concrete
         private readonly CancellationTokenSource _stoppingCts =
             new CancellationTokenSource();
         private CancellationToken Token => _stoppingCts.Token;
-        private readonly Outputs _outputs = new Outputs();
+        //private readonly Outputs _outputs = new Outputs();
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
         /// <summary>
@@ -86,14 +86,14 @@ namespace TG_Bot.BusinessLayer.Concrete
                 {
                     InlineKeyboardButton.WithCallbackData("Месяц", "month"),
                 },
-                new[]
-                {
-                    InlineKeyboardButton.WithCallbackData("Время года", "season"),
-                },
-                new[]
-                {
-                    InlineKeyboardButton.WithCallbackData("Год", "year"),
-                },
+                //new[]
+                //{
+                //    InlineKeyboardButton.WithCallbackData("Время года", "season"),
+                //},
+                //new[]
+                //{
+                //    InlineKeyboardButton.WithCallbackData("Год", "year"),
+                //},
                 new []
                 {
                     InlineKeyboardButton.WithCallbackData("Назад", "back")
@@ -130,6 +130,11 @@ namespace TG_Bot.BusinessLayer.Concrete
                 new []
                 {
                     InlineKeyboardButton.WithCallbackData("Состояния выходов", "output_states")
+                },
+                new []
+                {
+                    InlineKeyboardButton.WithCallbackData("Всё вкл.", "switches_enable"),
+                    InlineKeyboardButton.WithCallbackData("Всё выкл.", "switches_disable"),
                 },
                 new[]
                 {
@@ -421,31 +426,31 @@ namespace TG_Bot.BusinessLayer.Concrete
 
                 case "relay1_enable":
                 case "relay1_disable":
-                    await ReplySwitchOutput(callbackQuery, _outputs.Relay1, callbackQuery.Data.Contains("enable") ? 1 : 0);
+                    await ReplySwitchOutput(callbackQuery, Outputs.Relay1, callbackQuery.Data.Contains("enable") ? 1 : 0);
                     break;
 
                 case "output1_enable":
                 case "output1_disable":
                     stateValue = callbackQuery.Data.Contains("enable") ? 1 : 0;
-                    await ReplySwitchOutput(callbackQuery, _outputs.Output1, stateValue);
+                    await ReplySwitchOutput(callbackQuery, Outputs.Output1, stateValue);
                     break;
 
                 case "output2_enable":
                 case "output2_disable":
                     stateValue = callbackQuery.Data.Contains("enable") ? 1 : 0;
-                    await ReplySwitchOutput(callbackQuery, _outputs.Output2, stateValue);
+                    await ReplySwitchOutput(callbackQuery, Outputs.Output2, stateValue);
                     break;
 
                 case "output3_enable":
                 case "output3_disable":
                     stateValue = callbackQuery.Data.Contains("enable") ? 1 : 0;
-                    await ReplySwitchOutput(callbackQuery, _outputs.Output3, stateValue);
+                    await ReplySwitchOutput(callbackQuery, Outputs.Output3, stateValue);
                     break;
 
                 case "output4_enable":
                 case "output4_disable":
                     stateValue = callbackQuery.Data.Contains("enable") ? 1 : 0;
-                    await ReplySwitchOutput(callbackQuery, _outputs.Output4, stateValue);
+                    await ReplySwitchOutput(callbackQuery, Outputs.Output4, stateValue);
                     break;
 
                 case "output_states":
@@ -546,6 +551,12 @@ namespace TG_Bot.BusinessLayer.Concrete
                     await AnswerAndSendKeyboard(callbackQuery, _keyboard);
                     break;
 
+                case "switches_enable":
+                case "switches_disable":
+                    stateValue = callbackQuery.Data.Contains("enable") ? 1 : 0;
+                    await ReplySwitchAllOutputs(callbackQuery, stateValue);
+                    break;
+
                 default:
 
                     break;
@@ -599,6 +610,9 @@ namespace TG_Bot.BusinessLayer.Concrete
                 await _botClient.AnswerCallbackQueryAsync(
                     callbackQuery.Id, cancellationToken: Token);
 
+                // Показываем статус отправки фото
+                await _botClient.SendChatActionAsync(callbackQuery.Message.Chat.Id, ChatAction.Typing, Token);
+
                 //переключение выхода
                 var result = _restService.SwitchOutput(new CommandRequest
                 {
@@ -629,6 +643,51 @@ namespace TG_Bot.BusinessLayer.Concrete
             _logger.Info(string.IsNullOrEmpty(callbackQuery.From.FirstName)
                 ? $"Переключение состояния выхода {output.Name}"
                 : $"Переключение состояния выхода {output.Name} от {callbackQuery.From.FirstName}");
+        }
+
+
+        /// <summary>
+        /// Ответ переключения состояния всех выходов
+        /// </summary>
+        /// <param name="callbackQuery">Запрос</param>
+        /// <param name="stateValue">Новое состояние</param>
+        /// <returns></returns>
+        private async Task ReplySwitchAllOutputs(CallbackQuery callbackQuery, int stateValue)
+        {
+            try
+            {
+                //ответ о принятии сообщения
+                await _botClient.AnswerCallbackQueryAsync(
+                    callbackQuery.Id, cancellationToken: Token);
+
+                // Показываем статус отправки фото
+                await _botClient.SendChatActionAsync(callbackQuery.Message.Chat.Id, ChatAction.Typing, Token);
+
+                var result = _restService.SwitchAll(stateValue);
+
+                //удаление клавиатуры у предыдущего сообщения
+                await RemoveKeyboardFromPrevious(callbackQuery);
+
+                //ответ
+                await _botClient.SendTextMessageAsync(
+                    chatId: callbackQuery.Message.Chat.Id,
+                    text: result,
+                    replyMarkup: _controlKeyboard, cancellationToken: Token);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"Ошибка - {ex.Message}");
+                //удаление клавиатуры у предыдущего сообщения
+                await RemoveKeyboardFromPrevious(callbackQuery);
+                await _botClient.SendTextMessageAsync(
+                    chatId: callbackQuery.Message.Chat.Id,
+                    text: "Ошибка переключения состояний",
+                    replyMarkup: _controlKeyboard, cancellationToken: Token);
+            }
+            _logger.Info(string.IsNullOrEmpty(callbackQuery.From.FirstName)
+                ? $"Переключение состояния выходов"
+                : $"Переключение состояния выходов от {callbackQuery.From.FirstName}");
+
         }
 
         /// <summary>
@@ -737,20 +796,19 @@ namespace TG_Bot.BusinessLayer.Concrete
             //отправка фото
             try
             {
-                var task = _camService.GetFfmpegCam(Token, "YardCam");
-                while (!task.IsCompleted)
-                {
-                    if (_stoppingCts.Token.IsCancellationRequested)
-                    {
-                        Token.ThrowIfCancellationRequested();
-                    }
-
-                    await _botClient.SendChatActionAsync(callbackQuery.Message.Chat.Id, ChatAction.UploadPhoto,
-                        Token);
-                    await Task.Delay(100, Token);
-                }
-
-                var (fileP, fileName) = task.Result;
+                var task = await _camService.GetFfmpegCam(Token, "YardCam");
+                //while (!task.IsCompleted)
+                //{
+                //    if (_stoppingCts.Token.IsCancellationRequested)
+                //    {
+                //        Token.ThrowIfCancellationRequested();
+                //    }
+                //    await Task.Delay(300, Token);
+                //}
+                await _botClient.SendChatActionAsync(callbackQuery.Message.Chat.Id, ChatAction.UploadPhoto,
+                    Token);
+                
+                var (fileP, fileName) = task;
                 filePathToDelete = fileP;
                 await using FileStream fileStream =
                     new FileStream(fileP, FileMode.Open, FileAccess.Read, FileShare.Read);
@@ -807,21 +865,20 @@ namespace TG_Bot.BusinessLayer.Concrete
             //отправка фото
             try
             {
-                var task = _camService.GetFfmpegCam(Token, "OverviewCam");
-                while (!task.IsCompleted)
-                {
-                    if (_stoppingCts.Token.IsCancellationRequested)
-                    {
-                        Token.ThrowIfCancellationRequested();
-                    }
+                var task = await _camService.GetFfmpegCam(Token, "OverviewCam");
+                //while (!task.IsCompleted)
+                //{
+                //    if (_stoppingCts.Token.IsCancellationRequested)
+                //    {
+                //        Token.ThrowIfCancellationRequested();
+                //    }
 
-                    await _botClient.SendChatActionAsync(callbackQuery.Message.Chat.Id, ChatAction.UploadPhoto,
-                        Token);
-                    await Task.Delay(100, Token);
-                }
+                //    await _botClient.SendChatActionAsync(callbackQuery.Message.Chat.Id, ChatAction.UploadPhoto,
+                //        Token);
+                //    await Task.Delay(300, Token);
+                //}
 
-                var (fileP, fileName) = task.Result;
-                //var (fileP, fileName) = await _camService.GetFfmpegCam();
+                var (fileP, fileName) = task;
                 filePathToDelete = fileP;
                 await using FileStream fileStream =
                     new FileStream(fileP, FileMode.Open, FileAccess.Read, FileShare.Read);
@@ -970,7 +1027,7 @@ namespace TG_Bot.BusinessLayer.Concrete
                 _executingTask.Start();
                 _logger.Debug("Telegram bot initiated");
             }
-            catch (OperationCanceledException exception)
+            catch (OperationCanceledException)
             {
                 _logger.Debug($"Работа бота отменена");
             }

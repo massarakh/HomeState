@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using TG_Bot.Helpers;
@@ -39,6 +40,14 @@ namespace Test
         {
             await using var context = _provider.GetService<_4stasContext>();
             GetMinMaxTemp(context, StatType.Weekend);
+        }
+
+        [Fact]
+        public void DapperState()
+        {
+            var conf = _provider.GetService<IConfiguration>();
+            var connString = conf.GetConnectionString("DefaultConnection");
+            Assert.NotNull(connString);
         }
 
         [Fact]

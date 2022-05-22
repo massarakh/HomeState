@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using NLog;
@@ -139,6 +141,148 @@ namespace TG_Bot.BusinessLayer.Concrete
                     $"Температура: {model.Temp} °С\n" +
                     $"Баланс:      {model.Balance} ₽\n" +
                     $"Батарея:     {model.Battery.Charge}%</pre>";
+        }
+
+        /// <inheritdoc />
+        public bool CheckConnectivity()
+        {
+            try
+            {
+                var client = new RestClient(Url)
+                {
+                    Authenticator = new HttpBasicAuthenticator(Login, Password)
+                };
+                var cmd = new CommandRequest { Command = GetStateCommand };
+
+                var request = new RestRequest().AddParameter("cmd", JsonConvert.SerializeObject(cmd, new JsonSerializerSettings()
+                {
+                    NullValueHandling = NullValueHandling.Ignore
+                }));
+                var response = client.Get(request);
+                var model = JsonConvert.DeserializeObject<CcuState>(response.Content);
+                if (model != null)
+                    return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"Невозможно установить соединение с контроллером - {ex.Message}");
+                return false;
+            }
+
+            return false;
+        }
+
+        /// <inheritdoc />
+        public string SwitchAll(int enable)
+        {
+            List<Task> TaskList = new List<Task>();
+            StringBuilder sb = new StringBuilder();
+
+            Task<string> relayTask = new Task<string>(() =>
+            {
+                try
+                {
+                    return SwitchOutput(new CommandRequest
+                    {
+                        Command = SwitchCommand,
+                        Output = Outputs.Relay1,
+                        State = enable 
+                    });
+                }
+                catch
+                {
+                    return $"Ошибка изменения состояния {Outputs.Relay1.Name}";
+                }
+
+            });
+            relayTask.Start();
+
+            Task<string> Output1Task = new Task<string>(() =>
+            {
+                try
+                {
+                    return SwitchOutput(new CommandRequest
+                    {
+                        Command = SwitchCommand,
+                        Output = Outputs.Output1,
+                        State = enable 
+                    });
+                }
+                catch
+                {
+                    return $"Ошибка изменения состояния {Outputs.Output1.Name}";
+                }
+            });
+            Output1Task.Start();
+
+            Task<string> Output2Task = new Task<string>(() =>
+            {
+                try
+                {
+                    return SwitchOutput(new CommandRequest
+                    {
+                        Command = SwitchCommand,
+                        Output = Outputs.Output2,
+                        State = enable
+                    });
+                }
+                catch
+                {
+                    return $"Ошибка изменения состояния {Outputs.Output2.Name}";
+                }
+            });
+            Output2Task.Start();
+
+            Task<string> Output3Task = new Task<string>(() =>
+            {
+                try
+                {
+                    return SwitchOutput(new CommandRequest
+                    {
+                        Command = SwitchCommand,
+                        Output = Outputs.Output3,
+                        State = enable
+                    });
+                }
+                catch
+                {
+                    return $"Ошибка изменения состояния {Outputs.Output3.Name}";
+                }
+            });
+            Output3Task.Start();
+
+            Task<string> Output4Task = new Task<string>(() =>
+            {
+                try
+                {
+                    return SwitchOutput(new CommandRequest
+                    {
+                        Command = SwitchCommand,
+                        Output = Outputs.Output4,
+                        State = enable
+                    });
+                }
+                catch
+                {
+                    return $"Ошибка изменения состояния {Outputs.Output4.Name}";
+                }
+            });
+            Output4Task.Start();
+
+            TaskList.Add(relayTask);
+            TaskList.Add(Output1Task);
+            TaskList.Add(Output2Task);
+            TaskList.Add(Output3Task);
+            TaskList.Add(Output4Task);
+
+            Task.WaitAll(TaskList.ToArray());
+
+            foreach (Task<string> task in TaskList)
+            {
+                sb.AppendLine(task.Result);
+            }
+
+            return sb.ToString();
         }
     }
 }

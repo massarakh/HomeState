@@ -19,5 +19,17 @@ namespace TG_Bot.BusinessLayer.Abstract
         /// </summary>
         /// <returns></returns>
         string GetState();
+
+        /// <summary>
+        /// Проверка соединения
+        /// </summary>
+        /// <returns></returns>
+        bool CheckConnectivity();
+
+        /// <summary>
+        /// Переключение всех выходов
+        /// </summary>
+        /// <returns></returns>
+        string SwitchAll(int enable);
     }
 }

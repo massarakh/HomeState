@@ -59,9 +59,8 @@ namespace Test
         {
             var client = new RestClient("http://192.168.0.118:4040/data.cgx");
             client.Authenticator = new HttpBasicAuthenticator("Nick", "gala2013");
-            Outputs o = new Outputs();
             int state = 1;
-            var cmd = new CommandRequest { Command = "SetOutputState", Output = o.Output3, State = state };
+            var cmd = new CommandRequest { Command = "SetOutputState", Output = Outputs.Output3, State = state };
 
             var request = new RestRequest().AddParameter("cmd", JsonConvert.SerializeObject(cmd));
             var response = client.Get(request);

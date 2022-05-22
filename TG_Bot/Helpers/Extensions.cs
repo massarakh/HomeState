@@ -9,14 +9,18 @@ namespace TG_Bot.Helpers
 {
     public static class Extensions
     {
+        private static string enable = char.ConvertFromUtf32(0x2705);
+        private static string disable = char.ConvertFromUtf32(0x1F6D1);
+
         public static string ToFormatted(this bool state)
         {
-            return state ? "Вкл." : "Выкл.";
+            return state ? $"{enable}" : $"{disable}";
+            //return state ? "Вкл." : "Выкл.";
         }
 
         public static string ToFormatted(this int state)
         {
-            return state == 1 ? "Вкл." : "Выкл.";
+            return state == 1 ? $"{enable}" : $"{disable}";
         }
 
         public static DateTime StartOfWeek(this DateTime dt, DayOfWeek startOfWeek)
