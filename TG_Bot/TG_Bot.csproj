@@ -4,14 +4,24 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net6.0</TargetFramework>
     <ApplicationIcon>home_house_3526.ico</ApplicationIcon>
-    <AssemblyVersion>1.2.2.26</AssemblyVersion>
-    <FileVersion>1.2.2.26</FileVersion>
-    <Version>1.2.5.8</Version>
+    <AssemblyVersion>1.2.6.12</AssemblyVersion>
+    <FileVersion>1.2.6.12</FileVersion>
+    <Version>1.2.6.12</Version>
     <Authors>Nikita Bukharenko</Authors>
     <NeutralLanguage>ru</NeutralLanguage>
     <Copyright>Никита Бухаренко</Copyright>
     <LangVersion>8</LangVersion>
-    <Description>Сборка от 08.05.2022
+    <Description>Сборка от 12.06.2022
+Версия 1.2.6.12
+Changelog:
+- Добавлено отображение погоды
+
+Сборка от 22.05.2022
+Версия 1.2.5.22
+Changelog:
+- Убран лишний шаг при запросе параметров
+
+Сборка от 08.05.2022
 Версия 1.2.5.8
 Changelog:
 - Добавлен статус контроллера

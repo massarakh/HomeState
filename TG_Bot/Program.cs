@@ -58,6 +58,7 @@ namespace TG_Bot
                     //services.AddLogging();
 
                     services.AddScoped<IStateRepository, StateRepository>();
+                    services.AddScoped<IWeatherRepository, WeatherRepository>();
                     services.AddSingleton<IConfiguration>(context.Configuration);
                     services.AddScoped<ICamService, CamService>();
                     services.AddScoped<IStateService, StateService>();

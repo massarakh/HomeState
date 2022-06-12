@@ -20,15 +20,17 @@ namespace TG_Bot.BusinessLayer.Concrete
         private readonly IStateRepository _repository;
         private readonly IConfiguration _configuration;
         private readonly IRestService _restService;
+        private readonly IWeatherRepository _weatherRepository;
         private double _priceDay;
         private double _priceNight;
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
-        public StateService(IStateRepository repository, IConfiguration configuration, IRestService restService)
+        public StateService(IStateRepository repository, IConfiguration configuration, IRestService restService, IWeatherRepository weatherRepository)
         {
             _repository = repository;
             _configuration = configuration;
             _restService = restService;
+            _weatherRepository = weatherRepository;
             (_priceDay, _priceNight) = GetPrices();
         }
 
@@ -128,13 +130,10 @@ namespace TG_Bot.BusinessLayer.Concrete
             switch (type)
             {
                 case StatType.Day:
-
                     start = DateTime.Now.AddHours(-24).AddTicks(-1);
                     end = DateTime.Now;
-
                     result = "<pre>За 24 часа (Мин/Макс): " +
                              "\n{0}°С / {1}°С</pre>";
-
                     break;
 
                 case StatType.Weekend:
@@ -303,6 +302,27 @@ namespace TG_Bot.BusinessLayer.Concrete
             }
 
             return retValue + electricity + "</pre>";
+        }
+
+        /// <inheritdoc />
+        public async Task<string> GetWeather()
+        {
+            var weather = await _weatherRepository.GetLastWeather();
+            return $"<pre>" +
+                   $"Время:         {weather.Timestamp}\n" +
+                   $"Дата:          {weather.Date}\n" +
+                   $"====================\n" +
+                   $"Температура:   {weather.Temperature} °С\n" +
+                   $"Ощущается как: {weather.TemperatureFeelsLike} °С\n" +
+                   $"Влажность:     {weather.Humidity} %\n" +
+                   $"Давление:      {weather.Pressure} мм рт.ст.\n" +
+                   $"Ветер:         {weather.WindSpeed} м/с ({weather.WindDirection})\n" +
+                   $"Порывами до:   {weather.WindGust} м/с\n" +
+                   $"Погода:        {weather.WeatherMain}\n" +
+                   $"====================\n" +
+                   $"Восход:        {weather.Sunrise}\n" +
+                   $"Закат:         {weather.Sunset}" +
+                   $"</pre>";
         }
 
         private List<ElectricityValues> GetElectricityValues(List<Monitor> records)

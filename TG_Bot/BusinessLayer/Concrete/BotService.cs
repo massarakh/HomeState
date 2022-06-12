@@ -61,6 +61,7 @@ namespace TG_Bot.BusinessLayer.Concrete
                 new []
                 {
                     InlineKeyboardButton.WithCallbackData("Статистика", "stats"),
+                    InlineKeyboardButton.WithCallbackData("Погода", "weather"),
                 }
             });
 
@@ -305,60 +306,11 @@ namespace TG_Bot.BusinessLayer.Concrete
                 replyMarkup: inlineKeyboard, cancellationToken: Token);
         }
 
-        //async Task SendInlineKeyboard(long ChatId)
-        //{
-        //    await _botClient.SendChatActionAsync(ChatId, ChatAction.Typing);
-        //    await _botClient.SendTextMessageAsync(
-        //        chatId: ChatId,
-        //        text: "Выберите запрос",
-        //        replyMarkup: _keyboard
-        //    );
-        //}
-
-        //async Task SendFile(Message message)
-        //{
-        //    await _botClient.SendChatActionAsync(message.Chat.Id, ChatAction.UploadPhoto, Token);
-
-        //    const string filePath = @"Files/tux.png";
-        //    using FileStream fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-        //    var fileName = filePath.Split(Path.DirectorySeparatorChar).Last();
-
-        //    await _botClient.SendPhotoAsync(
-        //        chatId: message.Chat.Id,
-        //        photo: new InputOnlineFile(fileStream, fileName),
-        //        caption: "Nice Picture", cancellationToken: Token);
-        //}
-
-        //async Task RequestContactAndLocation(Message message)
-        //{
-        //    var RequestReplyKeyboard = new ReplyKeyboardMarkup(new[]
-        //    {
-        //            KeyboardButton.WithRequestLocation("Location"),
-        //            KeyboardButton.WithRequestContact("Contact"),
-        //        });
-        //    await _botClient.SendTextMessageAsync(
-        //        chatId: message.Chat.Id,
-        //        text: "Who or Where are you?",
-        //        replyMarkup: RequestReplyKeyboard, cancellationToken: Token);
-        //}
-
-        //async Task Usage(Message message)
-        //{
-        //    //const string usage = "Usage:\n" +
-        //    //                        "/inline   - send inline keyboard\n" +
-        //    //                        "/keyboard - send custom keyboard\n" +
-        //    //                        "/photo    - send a photo\n" +
-        //    //                        "/request  - request location or contact";
-        //    const string usage = "Использование: \n" +
-        //                         "/state          - текущее состояние системы\n" +
-        //                         "/temperature    - температура объектов";
-        //    await _botClient.SendTextMessageAsync(
-        //        chatId: message.Chat.Id,
-        //        text: usage,
-        //        replyMarkup: new ReplyKeyboardRemove(), cancellationToken: Token);
-        //}
-
-        // Process Inline Keyboard callback data
+        /// <summary>
+        /// Process Inline Keyboard callback data
+        /// </summary>
+        /// <param name="callbackQuery"></param>
+        /// <returns></returns>
         private async Task BotOnCallbackQueryReceived(CallbackQuery callbackQuery)
         {
             if (!await Authenticate(callbackQuery))
@@ -545,6 +497,15 @@ namespace TG_Bot.BusinessLayer.Concrete
                         ? $"Запрос статистики за год"
                         : $"Запрос статистики за год от {callbackQuery.From.FirstName}");
                     break;
+                #endregion
+
+                #region Погода
+
+                case "weather":
+                    var weather = await _stateService.GetWeather();
+                    await Answer(callbackQuery, weather);
+                    break;
+
                 #endregion
 
                 case "back":
@@ -938,13 +899,19 @@ namespace TG_Bot.BusinessLayer.Concrete
                 replyMarkup: null, cancellationToken: Token);
 
             //отправка результата + кнопка "Назад"
+            //await _botClient.SendTextMessageAsync(
+            //    chatId: callbackQuery.Message.Chat.Id,
+            //    text: result,
+            //    replyMarkup: new InlineKeyboardMarkup(new[]
+            //    {
+            //        InlineKeyboardButton.WithCallbackData("Назад", "back"),
+            //    }), cancellationToken: Token,
+            //    parseMode: ParseMode.Html);
+
             await _botClient.SendTextMessageAsync(
                 chatId: callbackQuery.Message.Chat.Id,
                 text: result,
-                replyMarkup: new InlineKeyboardMarkup(new[]
-                {
-                    InlineKeyboardButton.WithCallbackData("Назад", "back"),
-                }), cancellationToken: Token,
+                replyMarkup: _keyboard, cancellationToken: Token,
                 parseMode: ParseMode.Html);
         }
 

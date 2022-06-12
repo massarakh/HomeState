@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using MySqlConnector;
 using TG_Bot.BusinessLayer;
 using TG_Bot.monitoring;
 
@@ -11,7 +9,6 @@ namespace TG_Bot.DAL
 {
     class StateRepository : IStateRepository
     {
-        private readonly string _connString;
         private readonly _4stasContext _context;
 
         /// <inheritdoc />
@@ -19,12 +16,7 @@ namespace TG_Bot.DAL
         {
             _context = context;
         }
-
-        //public StateRepository(string connString)
-        //{
-        //    _connString = connString;
-        //}
-
+        
         /// <inheritdoc />
         public async Task<Data> GetState()
         {
@@ -35,12 +27,6 @@ namespace TG_Bot.DAL
             Ccu ccuState = await _context.CCU
                 .OrderByDescending(d => d.Id)
                 .FirstOrDefaultAsync();
-
-
-            //using (IDbConnection db = new MySqlConnection(_connString))
-            //{
-
-            //}
 
             return new Data
             {
