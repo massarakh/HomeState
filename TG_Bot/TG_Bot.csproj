@@ -4,14 +4,19 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net6.0</TargetFramework>
     <ApplicationIcon>home_house_3526.ico</ApplicationIcon>
-    <AssemblyVersion>1.2.6.12</AssemblyVersion>
-    <FileVersion>1.2.6.12</FileVersion>
-    <Version>1.2.6.12</Version>
+    <AssemblyVersion>1.3.7.9</AssemblyVersion>
+    <FileVersion>1.3.7.9</FileVersion>
+    <Version>1.3.7.9</Version>
     <Authors>Nikita Bukharenko</Authors>
     <NeutralLanguage>ru</NeutralLanguage>
     <Copyright>Никита Бухаренко</Copyright>
     <LangVersion>8</LangVersion>
-    <Description>Сборка от 12.06.2022
+    <Description>Сборка от 09.07.2022
+Версия 1.3.7.9
+Changelog:
+- Добавлены режимы статистики за прошлые периоды
+
+Сборка от 12.06.2022
 Версия 1.2.6.12
 Changelog:
 - Добавлено отображение погоды
@@ -39,6 +44,7 @@ Changelog:
     <RepositoryUrl>https://github.com/massarakh/HomeState</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>telegram</PackageTags>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
   </PropertyGroup>
 
   <ItemGroup>
@@ -55,6 +61,7 @@ Changelog:
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="5.0.2" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0" />
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.14.0" />
     <PackageReference Include="NLog.Extensions.Logging" Version="1.7.4" />
     <PackageReference Include="NLog.Web.AspNetCore" Version="4.14.0" />
     <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="5.0.1" />
@@ -88,6 +95,10 @@ Changelog:
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <CopyToPublishDirectory>Always</CopyToPublishDirectory>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="BusinessLayer\Partial\" />
   </ItemGroup>
 
 </Project>

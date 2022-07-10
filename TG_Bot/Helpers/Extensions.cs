@@ -88,7 +88,10 @@ namespace TG_Bot.Helpers
             Week = 2,
             Month = 3,
             Season = 4,
-            Year = 5
+            Year = 5,
+            LastWeekend = 6,
+            LastWeek = 7,
+            LastMonth = 8,
         }
     }
 }
