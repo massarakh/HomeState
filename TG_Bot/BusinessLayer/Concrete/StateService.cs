@@ -20,15 +20,17 @@ namespace TG_Bot.BusinessLayer.Concrete
         private readonly IStateRepository _repository;
         private readonly IConfiguration _configuration;
         private readonly IRestService _restService;
+        private readonly IWeatherRepository _weatherRepository;
         private double _priceDay;
         private double _priceNight;
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
-        public StateService(IStateRepository repository, IConfiguration configuration, IRestService restService)
+        public StateService(IStateRepository repository, IConfiguration configuration, IRestService restService, IWeatherRepository weatherRepository)
         {
             _repository = repository;
             _configuration = configuration;
             _restService = restService;
+            _weatherRepository = weatherRepository;
             (_priceDay, _priceNight) = GetPrices();
         }
 
@@ -128,18 +130,22 @@ namespace TG_Bot.BusinessLayer.Concrete
             switch (type)
             {
                 case StatType.Day:
-
                     start = DateTime.Now.AddHours(-24).AddTicks(-1);
                     end = DateTime.Now;
-
                     result = "<pre>За 24 часа (Мин/Макс): " +
                              "\n{0}°С / {1}°С</pre>";
-
                     break;
 
                 case StatType.Weekend:
                     start = DateTime.Now.StartOfWeek(DayOfWeek.Saturday);
-                    end = start.AddDays(1).AddTicks(-1);
+                    end = start.AddDays(2).AddTicks(-1);
+                    result = "<pre>Выходные " + start.Date.ToString("d'.'MM") + "-" + end.Date.ToString("d'.'MM") + " (Мин/Макс): " +
+                             "\n{0}°С / {1}°С </pre>";
+                    break;
+
+                case StatType.LastWeekend:
+                    start = DateTime.Now.AddDays(-7).StartOfWeek(DayOfWeek.Saturday);
+                    end = start.AddDays(2).AddTicks(-1);
                     result = "<pre>Выходные " + start.Date.ToString("d'.'MM") + "-" + end.Date.ToString("d'.'MM") + " (Мин/Макс): " +
                              "\n{0}°С / {1}°С </pre>";
                     break;
@@ -150,8 +156,22 @@ namespace TG_Bot.BusinessLayer.Concrete
                     result = "<pre>Неделя " + start.Date.ToString("d'.'MM") + "-" + end.Date.ToString("d'.'MM") + " (Мин/Макс): \n{0}°С / {1}°С </pre>";
                     break;
 
+                case StatType.LastWeek:
+                    start = DateTime.Now.AddDays(-7).StartOfWeek(DayOfWeek.Monday);
+                    end = start.AddDays(7).AddTicks(-1);
+                    result = "<pre>Неделя " + start.Date.ToString("d'.'MM") + "-" + end.Date.ToString("d'.'MM") + " (Мин/Макс): \n{0}°С / {1}°С </pre>";
+                    break;
+
                 case StatType.Month:
                     start = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+                    end = start.AddMonths(1).AddTicks(-1);
+                    result = "<pre>" + start.ToString("MMMM", CultureInfo.GetCultureInfo("ru-RU")) + " (Мин/Макс): \n" +
+                             "{0}°С\t{2}\n" +
+                             "{1}°С \t{3}</pre>";
+                    break;
+
+                case StatType.LastMonth:
+                    start = new DateTime(DateTime.Now.Year, DateTime.Now.AddMonths(-1).Month, 1);
                     end = start.AddMonths(1).AddTicks(-1);
                     result = "<pre>" + start.ToString("MMMM", CultureInfo.GetCultureInfo("ru-RU")) + " (Мин/Макс): \n" +
                              "{0}°С\t{2}\n" +
@@ -196,7 +216,7 @@ namespace TG_Bot.BusinessLayer.Concrete
                 minTemp.Timestamp?.ToString("dd'.'MM H':'mm"),
                 maxTemp.Timestamp?.ToString("dd'.'MM H':'mm"));
 
-            List<ElectricityValues> list;
+            List<ElectricityValues> list = new List<ElectricityValues>();
             StringBuilder sb;
             var electricity = "<pre>" +
                                  "\nЭлектричество:";
@@ -232,8 +252,11 @@ namespace TG_Bot.BusinessLayer.Concrete
                     break;
 
                 case StatType.Weekend:
+                case StatType.LastWeekend:
                 case StatType.Week:
+                case StatType.LastWeek:
                 case StatType.Month:
+                case StatType.LastMonth:
                     try
                     {
                         sb = new StringBuilder();
@@ -247,21 +270,24 @@ namespace TG_Bot.BusinessLayer.Concrete
                                 AverageDay = rc.Sum(_ => _.Average).ToString("0.00"),
                                 Summ = rc.Sum(_ => _.Price).ToString("0.00")
                             });
-
+                        
                         foreach (var v in daySum)
                         {
                             var dt = v.Date.ToString("dd'.'MM");
-                            if (v.Date.DayOfWeek == DayOfWeek.Saturday || v.Date.DayOfWeek == DayOfWeek.Sunday)
-                            {
-                                sb.Append($"\n{dt,-6}|{v.AverageDay,-7}|{v.Summ}");
-                            }
-                            else
-                            {
-                                sb.Append($"\n{dt,-6}|{v.AverageDay,-7}|{v.Summ}");
-                            }
+                            sb.Append($"\n{dt,-6}|{v.AverageDay,-7}|{v.Summ}");
+
+                            //if (v.Date.DayOfWeek == DayOfWeek.Saturday || v.Date.DayOfWeek == DayOfWeek.Sunday)
+                            //{
+                            //    sb.Append($"\n{dt,-6}|{v.AverageDay,-7}|{v.Summ}");
+                            //}
+                            //else
+                            //{
+                            //    sb.Append($"\n{dt,-6}|{v.AverageDay,-7}|{v.Summ}");
+                            //}
                         }
 
                         electricity += sb.ToString();
+
                     }
                     catch (Exception ex)
                     {
@@ -302,7 +328,42 @@ namespace TG_Bot.BusinessLayer.Concrete
                     break;
             }
 
+            if (list.Count != 0)
+            {
+                double totalKw = 0;
+                double totalCost = 0;
+                Array.ForEach(list.ToArray(), i =>
+                {
+                    totalKw += i.Average;
+                    totalCost += i.Price;
+                });
+                electricity += $"\n\nВсего за период:";
+                electricity += $"\n{totalKw:0.00} кВт*ч";
+                electricity += $"\n{totalCost:0.00} ₽";
+            }
+            
             return retValue + electricity + "</pre>";
+        }
+
+        /// <inheritdoc />
+        public async Task<string> GetWeather()
+        {
+            var weather = await _weatherRepository.GetLastWeather();
+            return $"<pre>" +
+                   $"Время:         {weather.Timestamp}\n" +
+                   $"Дата:          {weather.Date}\n" +
+                   $"====================\n" +
+                   $"Температура:   {weather.Temperature} °С\n" +
+                   $"Ощущается как: {weather.TemperatureFeelsLike} °С\n" +
+                   $"Влажность:     {weather.Humidity} %\n" +
+                   $"Давление:      {weather.Pressure} мм рт.ст.\n" +
+                   $"Ветер:         {weather.WindSpeed} м/с ({weather.WindDirection})\n" +
+                   $"Порывами до:   {weather.WindGust} м/с\n" +
+                   $"Погода:        {weather.WeatherMain}\n" +
+                   $"====================\n" +
+                   $"Восход:        {weather.Sunrise}\n" +
+                   $"Закат:         {weather.Sunset}" +
+                   $"</pre>";
         }
 
         private List<ElectricityValues> GetElectricityValues(List<Monitor> records)

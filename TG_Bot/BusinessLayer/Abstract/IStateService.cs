@@ -15,5 +15,7 @@ namespace TG_Bot.BusinessLayer.Abstract
 
         Task<string> GetStatistics(Additions.StatType type);
 
+        Task<string> GetWeather();
+
     }
 }

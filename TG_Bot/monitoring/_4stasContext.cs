@@ -35,6 +35,8 @@ namespace TG_Bot.monitoring
 
         public virtual DbSet<Ccu> CCU { get; set; }
 
+        public virtual DbSet<Openweather> Weather { get; set; }
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             base.OnConfiguring(optionsBuilder);
@@ -208,6 +210,104 @@ namespace TG_Bot.monitoring
                 entity.Property(e => e.R2)
                     .HasColumnType("float(9,2)")
                     .HasDefaultValueSql("'0.00'");
+            });
+
+            modelBuilder.Entity<Openweather>(entity =>
+            {
+                entity.HasNoKey();
+
+                entity.ToTable("openweather");
+
+                entity.HasIndex(e => e.Id, "Id");
+
+                
+
+                entity.Property(e => e.CloudsAll)
+                    .HasColumnType("float(9,3)")
+                    .HasColumnName("clouds_all")
+                    .HasDefaultValueSql("'0.000'");
+                
+
+                entity.Property(e => e.DateTime)
+                    .HasColumnType("datetime")
+                    .HasColumnName("date_time")
+                    .HasDefaultValueSql("'0000-00-00 00:00:00'");
+
+                entity.Property(e => e.Dt)
+                    .HasColumnType("datetime")
+                    .HasColumnName("dt")
+                    .HasDefaultValueSql("'0000-00-00 00:00:00'");
+
+                entity.Property(e => e.TemperatureFeelsLike)
+                    .HasColumnType("float(9,3)")
+                    .HasColumnName("feels_like")
+                    .HasDefaultValueSql("'0.000'");
+
+                entity.Property(e => e.Humidity)
+                    .HasColumnType("float(9,3)")
+                    .HasColumnName("humidity")
+                    .HasDefaultValueSql("'0.000'");
+
+                entity.Property(e => e.Id)
+                    .HasColumnType("int(11)")
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(e => e.Pressure)
+                    .HasColumnType("float(9,3)")
+                    .HasColumnName("pressure")
+                    .HasDefaultValueSql("'0.000'");
+
+                entity.Property(e => e.Sunrise)
+                    .HasColumnType("datetime")
+                    .HasColumnName("sunrise")
+                    .HasDefaultValueSql("'0000-00-00 00:00:00'");
+
+                entity.Property(e => e.SunriseText)
+                    .HasColumnType("int(16)")
+                    .HasColumnName("sunrise_text");
+
+                entity.Property(e => e.Sunset)
+                    .HasColumnType("datetime")
+                    .HasColumnName("sunset")
+                    .HasDefaultValueSql("'0000-00-00 00:00:00'");
+
+                entity.Property(e => e.SunsetText)
+                    .HasColumnType("int(16)")
+                    .HasColumnName("sunset_text");
+
+                entity.Property(e => e.Temperature)
+                    .HasColumnType("float(9,3)")
+                    .HasColumnName("temp")
+                    .HasDefaultValueSql("'0.000'");
+
+                entity.Property(e => e.WeatherDescription)
+                    .HasMaxLength(50)
+                    .HasColumnName("weather_description")
+                    .IsFixedLength(true);
+
+                entity.Property(e => e.WeatherId)
+                    .HasColumnType("int(16)")
+                    .HasColumnName("weather_id");
+
+                entity.Property(e => e.WeatherMain)
+                    .HasMaxLength(50)
+                    .HasColumnName("weather_main")
+                    .IsFixedLength(true);
+
+                entity.Property(e => e.WindDeg)
+                    .HasColumnType("float(9,3)")
+                    .HasColumnName("wind_deg")
+                    .HasDefaultValueSql("'0.000'");
+
+                entity.Property(e => e.WindGust)
+                    .HasColumnType("float(9,3)")
+                    .HasColumnName("wind_gust")
+                    .HasDefaultValueSql("'0.000'");
+
+                entity.Property(e => e.WindSpeed)
+                    .HasColumnType("float(9,3)")
+                    .HasColumnName("wind_speed")
+                    .HasDefaultValueSql("'0.000'");
             });
 
             OnModelCreatingPartial(modelBuilder);
