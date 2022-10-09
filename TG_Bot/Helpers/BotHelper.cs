@@ -112,32 +112,31 @@ namespace TG_Bot.Helpers
 
                 if (!string.IsNullOrEmpty(description))
                 {
-                    result += description+"\n";
+                    result += description;
                 }
-
-                result += $"Время работы: {GetUptimeValue()}";
-
-                //_logger.Info($"Сборка {assembly?.FullName}");
-                //string version = assembly?.GetName().Version.ToString();
-                //_logger.Info($"Версия сборки");
-                //string filePath = assembly?.Location;
-                //_logger.Info($"Местоположение сборки {filePath}");
-                //DateTime dt = new FileInfo(filePath).LastWriteTime;
-                //string uptime = GetUptimeValue();
-                //string result = $"Версия бота: {version}\n" +
-                //                $"Дата сборки: {dt:d'.'MM'.'yy}\n";
-                //if (!string.IsNullOrEmpty(uptime))
-                //{
-                //    string uptimeString = $"Время работы: {uptime}";
-                //    return result + uptimeString;
-                //}
-                //return result;
                 return result;
             }
             catch (Exception ex)
             {
                 _logger.Error($"Ошибка запроса, {ex.Message}");
                 return "Ошибка запроса системной информации";
+            }
+        }
+
+        /// <summary>
+        /// Получение времени работы 
+        /// </summary>
+        /// <returns></returns>
+        public string GetUptime()
+        {
+            try
+            {
+                return GetUptimeValue();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"Ошибка запроса, {ex.Message}");
+                return "Ошибка запроса времени работы";
             }
         }
 

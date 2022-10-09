@@ -15,8 +15,9 @@ RUN dotnet build "TG_Bot.csproj" -c Release -o /app/build
 FROM build AS publish
 RUN dotnet publish "TG_Bot.csproj" -c Release -o /app/publish
 
-FROM jrottenberg/ffmpeg:latest
-RUN apk add  --no-cache ffmpeg
+FROM katalonstudio/katalon
+RUN apt-get -y update
+RUN apt-get install -y ffmpeg
 
 FROM base AS final
 WORKDIR /app

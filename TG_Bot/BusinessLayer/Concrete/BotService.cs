@@ -283,6 +283,7 @@ namespace TG_Bot.BusinessLayer.Concrete
             await _botClient.SendChatActionAsync(message.Chat.Id, ChatAction.Typing, Token);
             InlineKeyboardMarkup inlineKeyboard;
             string text;
+            string result;
             switch (message.Text)
             {
                 case "/start":
@@ -292,7 +293,14 @@ namespace TG_Bot.BusinessLayer.Concrete
 
                 case "/info":
                     text = "Статус системы:\n";
-                    string result = _botHelper.GetSystemInfo();
+                    result = _botHelper.GetSystemInfo();
+                    text += result;
+                    inlineKeyboard = _keyboard;
+                    break;
+
+                case "/uptime":
+                    text = "Время работы:\n";
+                    result = _botHelper.GetUptime();
                     text += result;
                     inlineKeyboard = _keyboard;
                     break;
