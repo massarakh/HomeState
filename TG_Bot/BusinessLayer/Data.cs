@@ -13,6 +13,7 @@ namespace TG_Bot.BusinessLayer
        public Heat Heat;
        public bool Boiler;
        public bool BoilerHeat;
+       public bool Pool;
        public string Energy;
        public string Date;
 

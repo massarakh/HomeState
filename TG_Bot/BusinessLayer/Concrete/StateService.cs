@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using NLog;
 using TG_Bot.BusinessLayer.Abstract;
+using TG_Bot.BusinessLayer.CCUModels;
 using TG_Bot.DAL;
 using TG_Bot.Helpers;
 using TG_Bot.monitoring;
@@ -38,8 +39,10 @@ namespace TG_Bot.BusinessLayer.Concrete
         {
             IEnumerable<IConfigurationSection> sections = _configuration.GetSection("ElectricityPrices").GetChildren();
             var configurationSections = sections as IConfigurationSection[] ?? sections.ToArray();
-            var day = Convert.ToDouble(configurationSections.First(_ => _.Key == "Day").Value);
-            var night = Convert.ToDouble(configurationSections.First(_ => _.Key == "Night").Value);
+            string _day = configurationSections.First(_ => _.Key == "Day").Value;
+            string _night = configurationSections.First(_ => _.Key == "Night").Value;
+            double day = double.Parse(_day, new NumberFormatInfo { NumberDecimalSeparator = "." });
+            double night = double.Parse(_night, new NumberFormatInfo { NumberDecimalSeparator = "." });
             if (day == 0 || night == 0)
             {
                 _logger.Warn($"Не найдены тарифы на электричество");
@@ -52,6 +55,7 @@ namespace TG_Bot.BusinessLayer.Concrete
         {
             var state = await _repository.GetState();
             var controllerState = _restService.CheckConnectivity();
+            var poolState = _restService.CheckPool(Outputs.Output5);
 
             //return $"<pre>" +
             //       $"</pre>";
@@ -70,6 +74,7 @@ namespace TG_Bot.BusinessLayer.Concrete
                    $"Батареи:     {state.Heat.Batteries.ToFormatted()}\n" +
                    $"Спальня №4:  {state.BedroomYouth.ToFormatted()}\n" +
                    $"Кухня, полы: {state.WarmFloorKitchen.ToFormatted()}\n" +
+                   $"Бассейн:     {poolState.ToFormatted()}\n" +
                    $"Контроллер:  {controllerState.ToFormatted()}\n" +
                    $"====================\n" +
                    $"Гостиная:    {state.Temperature.LivingRoom} °С | {state.Humidity.LivingRoom} %\n" +
@@ -270,7 +275,7 @@ namespace TG_Bot.BusinessLayer.Concrete
                                 AverageDay = rc.Sum(_ => _.Average).ToString("0.00"),
                                 Summ = rc.Sum(_ => _.Price).ToString("0.00")
                             });
-                        
+
                         foreach (var v in daySum)
                         {
                             var dt = v.Date.ToString("dd'.'MM");
@@ -341,7 +346,7 @@ namespace TG_Bot.BusinessLayer.Concrete
                 electricity += $"\n{totalKw:0.00} кВт*ч";
                 electricity += $"\n{totalCost:0.00} ₽";
             }
-            
+
             return retValue + electricity + "</pre>";
         }
 

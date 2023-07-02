@@ -64,7 +64,9 @@ namespace TG_Bot
                     services.AddScoped<IStateService, StateService>();
                     services.AddScoped<IBotService, BotService>();
                     services.AddScoped<IRestService, RestService>();
+                    //services.AddScoped<IHealthService, HealthService>();
                     services.AddHostedService<BotService>();
+                    //services.AddHostedService<HealthService>();
                     var connectionString = context.Configuration.GetConnectionString("DefaultConnection");
                     //services.AddTransient<IStateRepository, StateRepository>(provider=> new StateRepository(context.Configuration.GetConnectionString("DefaultConnection")));
                     services.AddDbContext<_4stasContext>(options =>

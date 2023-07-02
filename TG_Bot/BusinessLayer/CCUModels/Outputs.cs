@@ -37,7 +37,7 @@ namespace TG_Bot.BusinessLayer.CCUModels
         /// <summary>
         /// Свободный выход
         /// </summary>
-        public static Output Output5 = new Output() { Index = 6, Meaning = "Output5", Name = "Output5" };
+        public static Output Output5 = new Output() { Index = 6, Meaning = "Output5", Name = "Бассейн" };
 
     }
 

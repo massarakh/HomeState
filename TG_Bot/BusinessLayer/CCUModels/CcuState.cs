@@ -1,13 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace TG_Bot.BusinessLayer.CCUModels
+﻿namespace TG_Bot.BusinessLayer.CCUModels
 {
     public class CcuState
     {
         public Input[] Inputs { get; set; }
         public int[] Outputs { get; set; }
+
+        public int[] Relays
+        {
+            get
+            {
+                return new int[2] { Outputs[0], Outputs[1] };
+            }
+        }
+
         public string[] Partitions { get; set; }
         public int Case { get; set; }
         public float Power { get; set; }
