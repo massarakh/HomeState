@@ -81,7 +81,7 @@ namespace TG_Bot.BusinessLayer.Concrete
             _configuration = configuration;
         }
         /// <inheritdoc />
-        public string SwitchOutput(CommandRequest request)
+        public string[] SwitchOutput(CommandRequest request)
         {
             CcuState model;
             try
@@ -104,7 +104,8 @@ namespace TG_Bot.BusinessLayer.Concrete
                 throw new Exception($"Невозможно изменить состояние выхода \"{request.Output.Name}\" - {ex.Message}");
             }
 
-            return $"{request.Output.Name} - {model.Outputs[request.Output.Index].ToFormatted()}";
+            return new string[] { request.Output.Name, model.Outputs[request.Output.Index].ToFormatted() };
+            //return $"{request.Output.Name} - {model.Outputs[request.Output.Index].ToFormatted()}";
         }
 
         /// <inheritdoc />
@@ -131,11 +132,12 @@ namespace TG_Bot.BusinessLayer.Concrete
                 throw new Exception($"Невозможно получить состояние контроллера - {ex.Message}");
             }
             return $"<pre>" +
-                    $"Конвекторы:  {model.Outputs[0].ToFormatted()}\n" +
+                    $"Конвекторы:  {model.Relays[0].ToFormatted()}\n" +
                     $"Бойлер:      {model.Outputs[2].ToFormatted()}\n" +
                     $"Полы (с/у):  {model.Outputs[3].ToFormatted()}\n" +
                     $"Спальня №4:  {model.Outputs[4].ToFormatted()}\n" +
                     $"Кухня:       {model.Outputs[5].ToFormatted()}\n" +
+                    $"Бассейн:     {model.Outputs[6].ToFormatted()}\n" +
                     $"\nСостояние контроллера\n" +
                     $"Напряжение:  {model.Power} V\n" +
                     $"Температура: {model.Temp} °С\n" +
@@ -178,7 +180,7 @@ namespace TG_Bot.BusinessLayer.Concrete
             List<Task> TaskList = new List<Task>();
             StringBuilder sb = new StringBuilder();
 
-            Task<string> relayTask = new Task<string>(() =>
+            Task<string[]> relayTask = new Task<string[]>(() =>
             {
                 try
                 {
@@ -186,18 +188,18 @@ namespace TG_Bot.BusinessLayer.Concrete
                     {
                         Command = SwitchCommand,
                         Output = Outputs.Relay1,
-                        State = enable 
+                        State = enable
                     });
                 }
                 catch
                 {
-                    return $"Ошибка изменения состояния {Outputs.Relay1.Name}";
+                    throw new Exception($"Ошибка изменения состояния {Outputs.Relay1.Name}");
                 }
 
             });
             relayTask.Start();
 
-            Task<string> Output1Task = new Task<string>(() =>
+            Task<string[]> Output1Task = new Task<string[]>(() =>
             {
                 try
                 {
@@ -205,17 +207,17 @@ namespace TG_Bot.BusinessLayer.Concrete
                     {
                         Command = SwitchCommand,
                         Output = Outputs.Output1,
-                        State = enable 
+                        State = enable
                     });
                 }
                 catch
                 {
-                    return $"Ошибка изменения состояния {Outputs.Output1.Name}";
+                    throw new Exception($"Ошибка изменения состояния {Outputs.Output1.Name}");
                 }
             });
             Output1Task.Start();
 
-            Task<string> Output2Task = new Task<string>(() =>
+            Task<string[]> Output2Task = new Task<string[]>(() =>
             {
                 try
                 {
@@ -228,12 +230,12 @@ namespace TG_Bot.BusinessLayer.Concrete
                 }
                 catch
                 {
-                    return $"Ошибка изменения состояния {Outputs.Output2.Name}";
+                    throw new Exception($"Ошибка изменения состояния {Outputs.Output2.Name}");
                 }
             });
             Output2Task.Start();
 
-            Task<string> Output3Task = new Task<string>(() =>
+            Task<string[]> Output3Task = new Task<string[]>(() =>
             {
                 try
                 {
@@ -246,12 +248,12 @@ namespace TG_Bot.BusinessLayer.Concrete
                 }
                 catch
                 {
-                    return $"Ошибка изменения состояния {Outputs.Output3.Name}";
+                    throw new Exception($"Ошибка изменения состояния {Outputs.Output3.Name}");
                 }
             });
             Output3Task.Start();
 
-            Task<string> Output4Task = new Task<string>(() =>
+            Task<string[]> Output4Task = new Task<string[]>(() =>
             {
                 try
                 {
@@ -264,7 +266,7 @@ namespace TG_Bot.BusinessLayer.Concrete
                 }
                 catch
                 {
-                    return $"Ошибка изменения состояния {Outputs.Output4.Name}";
+                    throw new Exception($"Ошибка изменения состояния {Outputs.Output4.Name}");
                 }
             });
             Output4Task.Start();
@@ -277,12 +279,44 @@ namespace TG_Bot.BusinessLayer.Concrete
 
             Task.WaitAll(TaskList.ToArray());
 
-            foreach (Task<string> task in TaskList)
+            sb.Append($"<pre>");
+            foreach (var task in TaskList)
             {
-                sb.AppendLine(task.Result);
+                var t = ((Task<string[]>)task).Result;
+                sb.AppendLine($"{t[0],-18} {t[1]}");
+            }
+            return sb.Append("</pre>").ToString();
+        }
+
+        /// <inheritdoc />
+        [Obsolete]
+        public bool CheckPool(Output output)
+        {
+            // TODO Сейчас лютый костыль: есть дублирование кода с метода получения всего состояния.
+            // TODO По-хорошему, надо привести модель состояния к объектной модели и уйти от простых типов, чтобы можно было получать по каждой сущности состояние
+            // TODO Сейчас реализована тупая проверка только одного выхода - бассейна, 5го выхода Outputs
+            // TODO Для того чтобы написать всё грамотно нужно реализовать кастомный сериализатор и переписать модели
+            try
+            {
+                var client = new RestClient(Url)
+                {
+                    Authenticator = new HttpBasicAuthenticator(Login, Password)
+                };
+                var cmd = new CommandRequest { Command = GetStateCommand };
+
+                var request = new RestRequest().AddParameter("cmd", JsonConvert.SerializeObject(cmd, new JsonSerializerSettings()
+                {
+                    NullValueHandling = NullValueHandling.Ignore
+                }));
+                var response = client.Get(request);
+                var model = JsonConvert.DeserializeObject<CcuState>(response.Content);
+                return model.Outputs[6] == 1;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Невозможно получить состояние контроллера - {ex.Message}");
             }
 
-            return sb.ToString();
         }
     }
 }

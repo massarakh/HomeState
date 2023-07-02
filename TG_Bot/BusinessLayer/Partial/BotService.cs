@@ -95,8 +95,8 @@ namespace TG_Bot.BusinessLayer.Concrete
                 //ответ
                 await _botClient.SendTextMessageAsync(
                     chatId: callbackQuery.Message.Chat.Id,
-                    text: result,
-                    replyMarkup: _controlKeyboard, cancellationToken: Token);
+                    text: $"<pre>{result[0]} {result[1]}</pre>",
+                    replyMarkup: _controlKeyboard, cancellationToken: Token, parseMode: ParseMode.Html);
             }
             catch (Exception ex)
             {
@@ -128,7 +128,7 @@ namespace TG_Bot.BusinessLayer.Concrete
                 await _botClient.AnswerCallbackQueryAsync(
                     callbackQuery.Id, cancellationToken: Token);
 
-                // Показываем статус отправки фото
+                // Показываем статус отправки сообщения
                 await _botClient.SendChatActionAsync(callbackQuery.Message.Chat.Id, ChatAction.Typing, Token);
 
                 var result = _restService.SwitchAll(stateValue);
@@ -140,7 +140,7 @@ namespace TG_Bot.BusinessLayer.Concrete
                 await _botClient.SendTextMessageAsync(
                     chatId: callbackQuery.Message.Chat.Id,
                     text: result,
-                    replyMarkup: _controlKeyboard, cancellationToken: Token);
+                    replyMarkup: _controlKeyboard, cancellationToken: Token, parseMode: ParseMode.Html);
             }
             catch (Exception ex)
             {

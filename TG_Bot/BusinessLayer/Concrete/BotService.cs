@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,6 +24,7 @@ namespace TG_Bot.BusinessLayer.Concrete
     {
         private readonly IStateService _stateService;
         private readonly ICamService _camService;
+        private readonly IConfiguration _configuration;
         private readonly IRestService _restService;
         private ITelegramBotClient _botClient;
         private readonly BotHelper _botHelper;
@@ -166,15 +168,33 @@ namespace TG_Bot.BusinessLayer.Concrete
                 },
                 new[]
                 {
+                    InlineKeyboardButton.WithCallbackData("Бассейн вкл.", "output5_enable"),
+                    InlineKeyboardButton.WithCallbackData("Бассейн выкл.", "output5_disable")
+                },
+                new[]
+                {
                     InlineKeyboardButton.WithCallbackData("Назад", "back")
                 }
             });
+
+        private List<string> Ttys
+        {
+            get
+            {
+                IEnumerable<IConfigurationSection> sections = _configuration.GetSection("Tty").GetChildren();
+                var arguments = (from s in sections
+                    select s.Value).ToList();
+
+                return arguments;
+            }
+        }
 
         public BotService(IStateService stateService, ICamService camService, IConfiguration configuration,
             IRestService restService)
         {
             _stateService = stateService;
             _camService = camService;
+            _configuration = configuration;
             _restService = restService;
             _botHelper = new BotHelper(configuration);
         }
@@ -281,33 +301,33 @@ namespace TG_Bot.BusinessLayer.Concrete
         async Task SendInlineKeyboard(Message message)
         {
             await _botClient.SendChatActionAsync(message.Chat.Id, ChatAction.Typing, Token);
-            InlineKeyboardMarkup inlineKeyboard;
             string text;
             string result;
             switch (message.Text)
             {
                 case "/start":
                     text = "Выберите запрос";
-                    inlineKeyboard = _keyboard;
                     break;
 
                 case "/info":
                     text = "Статус системы:\n";
                     result = _botHelper.GetSystemInfo();
                     text += result;
-                    inlineKeyboard = _keyboard;
                     break;
 
                 case "/uptime":
                     text = "Время работы:\n";
                     result = _botHelper.GetUptime();
                     text += result;
-                    inlineKeyboard = _keyboard;
                     break;
+
+                //case "/reconfigure":
+                //    text = "Внимание!\nБудет произведено переконфигурирование соединения с модулем CCU";
+                //    text += ReconfigureCCU();
+                //    break;
 
                 default:
                     text = "Выберите запрос";
-                    inlineKeyboard = _keyboard;
                     break;
             }
 
@@ -315,8 +335,16 @@ namespace TG_Bot.BusinessLayer.Concrete
             await _botClient.SendTextMessageAsync(
                 chatId: message.Chat.Id,
                 text: text,
-                replyMarkup: inlineKeyboard, cancellationToken: Token);
+                replyMarkup: _keyboard, cancellationToken: Token);
         }
+
+        //private async Task<string> ReconfigureCCU()
+        //{
+        //    string res = $"Текущий порт: {ShellHelper.GetCurrentPort()}";
+        //    await ShellHelper.TryToReconfigure(Ttys,out string result);
+        //    //TODO добавить ответ от метода переконфигурации
+        //    return result;
+        //}
 
         /// <summary>
         /// Process Inline Keyboard callback data
@@ -423,6 +451,12 @@ namespace TG_Bot.BusinessLayer.Concrete
                     await ReplySwitchOutput(callbackQuery, Outputs.Output4, stateValue);
                     break;
 
+                case "output5_enable":
+                case "output5_disable":
+                    stateValue = callbackQuery.Data.Contains("enable") ? 1 : 0;
+                    await ReplySwitchOutput(callbackQuery, Outputs.Output5, stateValue);
+                    break;
+
                 case "output_states":
                     await ReplyControllerState(callbackQuery);
                     break;
@@ -487,7 +521,7 @@ namespace TG_Bot.BusinessLayer.Concrete
                             ? $"Запрос статистики за прошлую неделю"
                             : $"Запрос статистики за прошлую неделю от {callbackQuery.From.FirstName}");
                     });
-                    break;  
+                    break;
 
                 case "month":
                     result = await _stateService.GetStatistics(StatType.Month);
@@ -687,5 +721,5 @@ namespace TG_Bot.BusinessLayer.Concrete
         }
     }
 
-    
+
 }

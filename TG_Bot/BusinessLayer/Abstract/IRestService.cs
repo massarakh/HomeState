@@ -12,7 +12,7 @@ namespace TG_Bot.BusinessLayer.Abstract
         /// </summary>
         /// <param name="request"></param>
         /// <returns></returns>
-        string SwitchOutput(CommandRequest request);
+        string[] SwitchOutput(CommandRequest request);
 
         /// <summary>
         /// Получение состояния
@@ -31,5 +31,12 @@ namespace TG_Bot.BusinessLayer.Abstract
         /// </summary>
         /// <returns></returns>
         string SwitchAll(int enable);
+
+        /// <summary>
+        /// Проверка конкретного выхода
+        /// </summary>
+        /// <param name="output5"></param>
+        /// <returns></returns>
+        bool CheckPool(Output output5);
     }
 }
